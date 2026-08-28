@@ -9,14 +9,8 @@ from src.application.dto.payments import PaymentCreateDTO
 from src.application.services.payments import PaymentService
 from src.core.enums import Currency, PaymentStatus
 from src.domain.entities import Payment
-from src.domain.unit_of_work import IUnitOfWork
 
 pytestmark = pytest.mark.asyncio
-
-
-@pytest.fixture
-def service(mock_uow: IUnitOfWork) -> PaymentService:
-    return PaymentService(mock_uow)
 
 
 async def test_create_payment_new(service: PaymentService, mock_uow: MagicMock) -> None:

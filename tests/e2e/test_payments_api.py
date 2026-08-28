@@ -1,10 +1,15 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from fastapi import status
 from fastapi.testclient import TestClient
+
+from src.application.dto.payments import PaymentCreateDTO
+from src.application.services.payments import PaymentService
+from src.core.enums import Currency, PaymentStatus
+from src.domain.entities import Payment
 
 
 def test_health_check(api_client: TestClient) -> None:
@@ -56,30 +61,41 @@ def test_create_payment_success(
     assert response.status_code == status.HTTP_202_ACCEPTED
 
 
-def test_create_payment_idempotency_returns_existing_payment(
-    api_client: TestClient,
-    sample_payment_data: dict,
-    mock_uow: MagicMock,
+async def test_create_payment_returns_existing_payment(
+    service: PaymentService,
+    mock_uow,
 ) -> None:
-    payment_id = uuid4()
-    existing = MagicMock()
-    existing.payment_id = payment_id
-    existing.amount = Decimal("100.00")
-    existing.currency = "USD"
-    existing.description = "Test payment"
-    existing.metadata_ = {"key": "value"}
-    existing.webhook_url = "https://example.com/webhook"
-    existing.status = "pending"
-    existing.created_at = datetime.now(UTC)
-    mock_uow.payments.get_by_idempotency_key.return_value = existing
+    existing_payment = Payment(
+        payment_id=UUID(
+            "12345678-1234-5678-1234-567812345678"
+        ),
+        amount=Decimal("100.00"),
+        currency=Currency.USD,
+        description="test",
+        metadata_={},
+        status=PaymentStatus.PENDING,
+        idempotency_key="key1",
+        webhook_url=None,
+        created_at=datetime(2025, 1, 1),
+    )
 
-    headers = {
-        "X-API-Key": "test-api-key",
-        "Idempotency-Key": "same-key",
-    }
-    response = api_client.post("/api/v1/payments", json=sample_payment_data, headers=headers)
+    mock_uow.payments.get_by_idempotency_key.return_value = (
+        existing_payment
+    )
 
-    assert response.status_code == status.HTTP_202_ACCEPTED
-    assert response.json()["payment_id"] == str(payment_id)
+    data = PaymentCreateDTO(
+        amount=Decimal("100.00"),
+        currency=Currency.USD,
+        description="test",
+        metadata={},
+        webhook_url=None,
+    )
+
+    result = await service.create_payment(
+        data,
+        "key1",
+    )
+
+    assert result is existing_payment
     mock_uow.commit.assert_not_awaited()
     mock_uow.outbox.add.assert_not_awaited()

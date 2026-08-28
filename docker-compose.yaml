@@ -1,0 +1,111 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB__USER:-postgres}
+      POSTGRES_PASSWORD: ${DB__PASSWORD:-postgres}
+      POSTGRES_DB: ${DB__NAME:-payments}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD:-guest}
+    ports:
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /app
+      DB__USER: ${DB__USER:-postgres}
+      DB__PASSWORD: ${DB__PASSWORD:-postgres}
+      DB__HOST: postgres
+      DB__PORT: 5432
+      DB__NAME: ${DB__NAME:-payments}
+      BROKER__URL: amqp://${RABBIT_USER:-guest}:${RABBIT_PASSWORD:-guest}@rabbitmq:5672//
+      BROKER__RESULT_BACKEND: rpc://
+      API_KEY: ${API_KEY:-test-api-key}
+    networks:
+      - backend
+    command: >
+      sh -c "/app/scripts/wait-for-db.sh postgres:5432
+      alembic upgrade head &&
+      uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload"
+
+  worker:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /app
+      DB__USER: ${DB__USER:-postgres}
+      DB__PASSWORD: ${DB__PASSWORD:-postgres}
+      DB__HOST: postgres
+      DB__PORT: 5432
+      DB__NAME: ${DB__NAME:-payments}
+      BROKER__URL: amqp://${RABBIT_USER:-guest}:${RABBIT_PASSWORD:-guest}@rabbitmq:5672//
+      BROKER__RESULT_BACKEND: rpc://
+      API_KEY: ${API_KEY:-test-api-key}
+    networks:
+      - backend
+    command: >
+      sh -c "/app/scripts/wait-for-db.sh postgres:5432
+      python -m src.workers.payment_consumer"
+
+  outbox_dispatcher:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /app
+      DB__USER: ${DB__USER:-postgres}
+      DB__PASSWORD: ${DB__PASSWORD:-postgres}
+      DB__HOST: postgres
+      DB__PORT: 5432
+      DB__NAME: ${DB__NAME:-payments}
+      BROKER__URL: amqp://${RABBIT_USER:-guest}:${RABBIT_PASSWORD:-guest}@rabbitmq:5672//
+      BROKER__RESULT_BACKEND: rpc://
+      API_KEY: ${API_KEY:-test-api-key}
+    networks:
+      - backend
+    command: >
+      sh -c "/app/scripts/wait-for-db.sh postgres:5432
+      python -m src.workers.outbox_dispatcher"
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+
+networks:
+  backend:

@@ -26,7 +26,6 @@ webhook_status = sa.Enum(
 
 
 def upgrade() -> None:
-    webhook_status.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "webhook_outbox",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),

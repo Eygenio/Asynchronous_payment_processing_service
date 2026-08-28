@@ -15,7 +15,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 COPY pyproject.toml ./
-RUN uv sync --no-dev
+RUN uv pip install --system --no-cache-dir .
 
 COPY . .
 
@@ -23,9 +23,8 @@ RUN chmod +x /app/scripts/wait-for-db.sh
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app \
-    PATH=/app/.venv/bin:$PATH
+    PYTHONPATH="/app" \
+    PYTHONDONTWRITEBYTECODE=1
 
 EXPOSE 8000
 

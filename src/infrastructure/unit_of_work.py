@@ -7,6 +7,7 @@ from src.domain.unit_of_work import IUnitOfWork
 from src.infrastructure.repositories.outbox import OutboxRepository
 from src.infrastructure.repositories.payments import PaymentRepository
 
+
 class SQLAlchemyUnitOfWork(IUnitOfWork):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session

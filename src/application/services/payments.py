@@ -10,6 +10,7 @@ from src.presentation.schemas.payments import PaymentCreateRequest
 
 logger = logging.getLogger(__name__)
 
+
 class PaymentService:
     def __init__(self, uow: IUnitOfWork) -> None:
         self.uow = uow
@@ -17,7 +18,11 @@ class PaymentService:
     async def get_payment(self, payment_id: UUID) -> Payment | None:
         return await self.uow.payments.get_by_id(payment_id)
 
-    async def create_payment(self, data: PaymentCreateRequest, idempotency_key: str) -> Payment:
+    async def create_payment(
+        self,
+        data: PaymentCreateRequest,
+        idempotency_key: str,
+    ) -> Payment:
         existing = await self.uow.payments.get_by_idempotency_key(idempotency_key)
         if existing:
             if not self._check_payload(existing, data):

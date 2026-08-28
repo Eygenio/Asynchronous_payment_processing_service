@@ -11,6 +11,7 @@ from src.domain.unit_of_work import IUnitOfWork
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from src.config.settings import settings
 
+
 async def get_uow() -> AsyncGenerator[IUnitOfWork, None]:
     async with async_session_maker() as session:
         uow = SQLAlchemyUnitOfWork(session)
@@ -49,5 +50,4 @@ async def verify_api_key(
             detail="Invalid API key",
         )
 
-# Dependency to use in routers if needed
 ApiKeyAuth = Depends(verify_api_key)

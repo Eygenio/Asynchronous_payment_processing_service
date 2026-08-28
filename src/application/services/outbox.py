@@ -1,9 +1,11 @@
 import logging
+
 from src.domain.unit_of_work import IUnitOfWork
 from src.core.exponential_retries import backoff_delay, attempts_exhausted
 from src.rabbit.producer import publish_payment_new, publish_payment_to_dlq
 
 logger = logging.getLogger(__name__)
+
 
 class OutboxService:
     def __init__(self, uow: IUnitOfWork) -> None:
@@ -25,7 +27,7 @@ class OutboxService:
                 logger.exception("Outbox message publish failed: %s", message.id)
                 attempts = message.retry_count + 1
 
-                if attempts_exhausted(attempts=attempts, max_attempts=settings.outbox_max_attempts):
+                if attempts_exhausted(attempts=attempts):
                     await self.uow.outbox.mark_failed(message, attempts=attempts)
                     failed_count += 1
                     try:
@@ -34,7 +36,10 @@ class OutboxService:
                             message_id=str(message.id),
                         )
                     except Exception:
-                        logger.exception("Failed to publish to DLQ for outbox message %s", message.id)
+                        logger.exception(
+                            "Failed to publish to DLQ for outbox message %s",
+                            message.id,
+                        )
                 else:
                     await self.uow.outbox.schedule_retry(
                         message,

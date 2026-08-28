@@ -7,7 +7,11 @@ from src.config.app import AppConfig
 from src.config.broker import BrokerConfig
 from src.config.database import DatabaseConfig
 from src.config.pool import DatabasePoolConfig
+from src.config.payment import PaymentConfig
+from src.config.webhook import WebhookConfig
+from src.config.outbox import OutboxConfig
 from src.config.logging_config import LOGGING_CONFIG
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -21,22 +25,9 @@ class Settings(BaseSettings):
     db: DatabaseConfig = Field(default_factory=DatabaseConfig)
     pool: DatabasePoolConfig = Field(default_factory=DatabasePoolConfig)
     broker: BrokerConfig = Field(default_factory=BrokerConfig)
-
-    api_key: str = Field(default="test-api-key", alias="API_KEY")
-    webhook_max_attempts: int = 3
-    webhook_base_delay_seconds: int = 2
-    webhook_timeout_seconds: int = 10
-    outbox_base_retry_delay_seconds: int = 3
-    outbox_max_attempts: int = 3
-    max_consumer_retries: int = 3
-
-    payments_exchange_name: str = "payments"
-    payments_dlx_name: str = "payments.dlx"
-    payment_new_route: str = "payments.new"
-    payment_retry_route: str = "payments.new.retry"
-    payment_dlq_route: str = "payments.new.dlq"
-    payment_retry_delay_ms: int = 10000
-    payments_new_topic: str = "payments.new"
+    payment: PaymentConfig = Field(default_factory=PaymentConfig)
+    webhook: WebhookConfig = Field(default_factory=WebhookConfig)
+    outbox: OutboxConfig = Field(default_factory=OutboxConfig)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

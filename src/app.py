@@ -15,7 +15,7 @@ logging.config.dictConfig(LOGGING_CONFIG)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # create tables? We use alembic migrations, so no need here.
+    await create_tables()
     yield
     await engine.dispose()
 
@@ -24,10 +24,11 @@ app = FastAPI(
     version=settings.app.version,
     description=settings.app.description,
     lifespan=lifespan,
-    dependencies=[Depends(verify_api_key)],  # global API key auth
+    dependencies=[Depends(verify_api_key)],
 )
 
 app.include_router(api_router)
+
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:

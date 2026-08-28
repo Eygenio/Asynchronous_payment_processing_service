@@ -9,6 +9,7 @@ from src.domain.repositories import IOutboxRepository
 from src.core.enums import OutboxStatus
 from src.infrastructure.models.outbox import OutboxOrm
 
+
 class OutboxRepository(IOutboxRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -39,7 +40,7 @@ class OutboxRepository(IOutboxRepository):
         return outbox
 
     async def get_ready_for_dispatch(self, limit: int) -> list[Outbox]:
-        stmt = (
+        statement = (
             select(OutboxOrm)
             .where(OutboxOrm.status == OutboxStatus.PENDING)
             .where(
@@ -52,7 +53,7 @@ class OutboxRepository(IOutboxRepository):
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
-        result = await self._session.execute(stmt)
+        result = await self._session.execute(statement)
         orm_list = result.scalars().all()
         return [self._to_domain(orm) for orm in orm_list]
 
@@ -65,7 +66,12 @@ class OutboxRepository(IOutboxRepository):
             orm.published_at = datetime.now(UTC)
             orm.backoff_delay = None
 
-    async def schedule_retry(self, message: Outbox, attempts: int, next_retry_at: datetime) -> None:
+    async def schedule_retry(
+        self,
+        message: Outbox,
+        attempts: int,
+        next_retry_at: datetime,
+    ) -> None:
         if message.id is None:
             raise ValueError("message id is None")
         orm = await self._session.get(OutboxOrm, message.id)
@@ -81,4 +87,3 @@ class OutboxRepository(IOutboxRepository):
             orm.status = OutboxStatus.FAILED
             orm.retry_count = attempts
             orm.backoff_delay = None
-            

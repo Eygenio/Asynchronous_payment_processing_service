@@ -7,6 +7,7 @@ from src.domain.entities import Payment
 from src.domain.repositories import IPaymentRepository
 from src.infrastructure.models.payments import PaymentOrm
 
+
 class PaymentRepository(IPaymentRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -31,14 +32,21 @@ class PaymentRepository(IPaymentRepository):
         return self._to_domain(result) if result else None
 
     async def get_by_id_for_update(self, payment_id: UUID) -> Payment | None:
-        stmt = select(PaymentOrm).where(PaymentOrm.payment_id == payment_id).with_for_update()
-        result = await self._session.execute(stmt)
+        statement = (
+            select(PaymentOrm)
+            .where(PaymentOrm.payment_id == payment_id)
+            .with_for_update()
+        )
+        result = await self._session.execute(statement)
         orm = result.scalar_one_or_none()
         return self._to_domain(orm) if orm else None
 
     async def get_by_idempotency_key(self, idempotency_key: str) -> Payment | None:
-        stmt = select(PaymentOrm).where(PaymentOrm.idempotency_key == idempotency_key)
-        result = await self._session.execute(stmt)
+        statement = (
+            select(PaymentOrm)
+            .where(PaymentOrm.idempotency_key == idempotency_key)
+        )
+        result = await self._session.execute(statement)
         orm = result.scalar_one_or_none()
         return self._to_domain(orm) if orm else None
 
@@ -67,7 +75,6 @@ class PaymentRepository(IPaymentRepository):
             payment.payment_id = refreshed.payment_id
             payment.created_at = refreshed.created_at
             payment.status = refreshed.status
-            # and other fields if needed
 
     async def update_status(self, payment: Payment) -> None:
         if payment.payment_id is None:

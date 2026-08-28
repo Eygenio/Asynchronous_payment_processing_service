@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class AppConfig(BaseModel):
     title: str = "Payment Processing Service"
     version: str = "0.1.0"

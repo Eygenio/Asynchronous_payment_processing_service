@@ -16,6 +16,7 @@ if config.config_file_name is not None:
 
 target_metadata = ModelBase.metadata
 
+
 def get_url():
     return settings.db.database_url.render_as_string(hide_password=False)
 
@@ -61,4 +62,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-    

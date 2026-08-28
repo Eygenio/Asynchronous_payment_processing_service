@@ -7,7 +7,11 @@ from src.rabbit.broker import (
     payments_exchange,
 )
 
-async def publish_payment_new(message: dict[str, Any], message_id: str | None = None) -> None:
+
+async def publish_payment_new(
+    message: dict[str, Any],
+    message_id: str | None = None,
+) -> None:
     await broker.publish(
         message=message,
         exchange=payments_exchange,
@@ -17,7 +21,10 @@ async def publish_payment_new(message: dict[str, Any], message_id: str | None = 
         mandatory=True,
     )
 
-async def publish_payment_to_dlq(message: dict[str, Any], message_id: str | None = None) -> None:
+async def publish_payment_to_dlq(
+    message: dict[str, Any],
+    message_id: str | None = None,
+) -> None:
     await broker.publish(
         message=message,
         exchange=payments_dlx_exchange,

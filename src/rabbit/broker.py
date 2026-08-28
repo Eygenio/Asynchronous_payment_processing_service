@@ -40,6 +40,7 @@ payments_new_dlq_queue = RabbitQueue(
 
 broker = RabbitBroker(settings.broker.url)
 
+
 async def create_rabbit() -> None:
     await broker.declare_exchange(payments_exchange)
     await broker.declare_exchange(payments_dlx_exchange)

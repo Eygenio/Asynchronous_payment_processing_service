@@ -5,12 +5,14 @@ from src.db.db import async_session_maker
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from src.application.services.outbox import OutboxService
 from src.rabbit.broker import broker, create_rabbit
+from src.core.constants import (
+    DISPATCH_BATCH_SIZE,
+    DISPATCH_POLL_INTERVAL_SECONDS,
+    DISPATCH_ERROR_BACKOFF_SECONDS,
+)
 
 logger = logging.getLogger(__name__)
 
-DISPATCH_BATCH_SIZE = 100
-DISPATCH_POLL_INTERVAL_SECONDS = 1.0
-DISPATCH_ERROR_BACKOFF_SECONDS = 3.0
 
 async def run_outbox_dispatcher() -> None:
     async with broker:

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from sqlalchemy import URL
 
+
 class DatabaseConfig(BaseModel):
     name: str
     user: str

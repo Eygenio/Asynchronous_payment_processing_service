@@ -5,7 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
-from src.common.enums import Currency, PaymentStatus
+from src.core.enums import Currency, PaymentStatus
+
 
 class PaymentCreateRequest(BaseModel):
     amount: Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=2)]
@@ -14,11 +15,13 @@ class PaymentCreateRequest(BaseModel):
     metadata: Annotated[dict[str, Any], Field(default_factory=dict)]
     webhook_url: HttpUrl | None = None
 
+
 class PaymentCreateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     payment_id: UUID
     status: PaymentStatus = PaymentStatus.PENDING
     created_at: datetime
+
 
 class PaymentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

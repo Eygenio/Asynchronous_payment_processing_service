@@ -4,6 +4,7 @@ from typing import Self
 
 from src.domain.repositories import IOutboxRepository, IPaymentRepository
 
+
 class IUnitOfWork(ABC):
     payments: IPaymentRepository
     outbox: IOutboxRepository

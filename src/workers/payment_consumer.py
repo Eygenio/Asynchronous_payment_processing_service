@@ -11,6 +11,7 @@ from src.application.services.payment_processing import PaymentProcessingService
 from src.application.services.webhooks import PaymentWebhookSender
 from src.common.enums import DeliveryStatus, ProcessingState
 from src.common.helpers import parse_retry_count, publish_to_dlq
+from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from src.rabbit.broker import (
     NEW_ROUTE,
     broker,
@@ -22,6 +23,7 @@ from src.rabbit.broker import (
 logger = logging.getLogger(__name__)
 app = FastStream(broker)
 webhook_sender = PaymentWebhookSender()
+
 
 @broker.subscriber(payments_new_queue, payments_exchange, ack_policy=AckPolicy.MANUAL)
 async def handle_payment_created(message: dict, msg: RabbitMessage) -> None:
@@ -75,7 +77,6 @@ async def handle_payment_created(message: dict, msg: RabbitMessage) -> None:
                 await msg.ack()
                 return
 
-            # Processed now
             if payment is None:
                 raise RuntimeError("Payment object is None after processing")
 
@@ -90,7 +91,6 @@ async def handle_payment_created(message: dict, msg: RabbitMessage) -> None:
                 payload=webhook_payload,
             )
             if delivery_status == DeliveryStatus.DLQ_PUBLISH_FAILED:
-                # If DLQ publish fails, we nack to retry
                 await msg.nack(requeue=False)
                 return
 

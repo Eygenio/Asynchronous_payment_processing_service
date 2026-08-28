@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class DatabasePoolConfig(BaseModel):
     echo: bool
     pool_pre_ping: bool

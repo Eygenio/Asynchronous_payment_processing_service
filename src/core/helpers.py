@@ -5,6 +5,7 @@ from src.rabbit.producer import publish_payment_to_dlq
 
 logger = logging.getLogger(__name__)
 
+
 async def publish_to_dlq(
     reason: str,
     payload: dict[str, Any],
@@ -18,6 +19,7 @@ async def publish_to_dlq(
     except Exception:
         logger.exception("DLQ publish failed for message: %s", message_id)
         raise
+
 
 def parse_retry_count(msg: Any, route: str) -> int:
     headers = getattr(msg, "headers", {}) or {}

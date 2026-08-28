@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from src.core.enums import Currency, PaymentStatus, OutboxStatus
 
+
 class Payment(BaseModel):
     payment_id: UUID | None = None
     amount: Decimal

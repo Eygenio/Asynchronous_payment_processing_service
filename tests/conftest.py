@@ -8,7 +8,6 @@ from fastapi.testclient import TestClient
 from faker import Faker
 
 from src.app import app
-from src.domain.entities import Payment
 from src.domain.unit_of_work import IUnitOfWork
 from src.presentation.dependencies import get_uow
 from src.common.enums import Currency, PaymentStatus

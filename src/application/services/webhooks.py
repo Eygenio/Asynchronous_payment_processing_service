@@ -12,6 +12,7 @@ from src.rabbit.producer import publish_payment_to_dlq
 
 logger = logging.getLogger(__name__)
 
+
 class PaymentWebhookSender:
     def __init__(
         self,

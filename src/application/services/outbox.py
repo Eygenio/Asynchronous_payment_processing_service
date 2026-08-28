@@ -1,7 +1,7 @@
 import logging
 
+from src.core.exponential_retries import attempts_exhausted, backoff_delay
 from src.domain.unit_of_work import IUnitOfWork
-from src.core.exponential_retries import backoff_delay, attempts_exhausted
 from src.rabbit.producer import publish_payment_new, publish_payment_to_dlq
 
 logger = logging.getLogger(__name__)

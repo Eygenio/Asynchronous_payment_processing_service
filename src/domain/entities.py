@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from src.core.enums import Currency, PaymentStatus, OutboxStatus
+from src.core.enums import Currency, OutboxStatus, PaymentStatus
 
 
 class Payment(BaseModel):
@@ -19,6 +19,7 @@ class Payment(BaseModel):
     webhook_url: str | None = None
     created_at: datetime | None = None
     processed_at: datetime | None = None
+
 
 class Outbox(BaseModel):
     id: UUID | None = None

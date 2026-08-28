@@ -1,22 +1,21 @@
-import asyncio
 from collections.abc import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
 
 import pytest
-from fastapi.testclient import TestClient
 from faker import Faker
+from fastapi.testclient import TestClient
 
 from src.app import app
 from src.domain.unit_of_work import IUnitOfWork
 from src.presentation.dependencies import get_uow
-from src.common.enums import Currency, PaymentStatus
 
 fake = Faker()
+
 
 @pytest.fixture
 def api_client() -> TestClient:
     return TestClient(app)
+
 
 @pytest.fixture
 def sample_payment_data() -> dict:
@@ -28,6 +27,7 @@ def sample_payment_data() -> dict:
         "webhook_url": "https://example.com/webhook",
     }
 
+
 @pytest.fixture
 def mock_uow() -> IUnitOfWork:
     uow = MagicMock(spec=IUnitOfWork)
@@ -38,9 +38,10 @@ def mock_uow() -> IUnitOfWork:
     uow.flush = AsyncMock()
     return uow
 
+
 @pytest.fixture(autouse=True)
-def override_get_uow(mock_uow: IUnitOfWork) -> Generator[None, None, None]:
-    async def _override() -> AsyncGenerator[IUnitOfWork, None]:
+def override_get_uow(mock_uow: IUnitOfWork) -> Generator[None]:
+    async def _override() -> AsyncGenerator[IUnitOfWork]:
         yield mock_uow
 
     app.dependency_overrides[get_uow] = _override

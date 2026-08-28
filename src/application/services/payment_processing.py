@@ -3,9 +3,9 @@ import random
 from datetime import UTC, datetime
 from uuid import UUID
 
+from src.core.enums import PaymentStatus, ProcessingState
 from src.domain.entities import Payment
 from src.domain.unit_of_work import IUnitOfWork
-from src.core.enums import PaymentStatus, ProcessingState
 
 
 class PaymentProcessingService:

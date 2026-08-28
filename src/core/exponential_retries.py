@@ -3,8 +3,8 @@ from datetime import UTC, datetime, timedelta
 
 from src.config.settings import settings
 
-BASE_RETRY_DELAY_SECONDS = settings.outbox_base_retry_delay_seconds
-MAX_OUTBOX_ATTEMPTS = settings.outbox_max_attempts
+BASE_RETRY_DELAY_SECONDS = settings.outbox.base_retry_delay_seconds
+MAX_OUTBOX_ATTEMPTS = settings.outbox.max_attempts
 
 
 def backoff_delay(attempts: int) -> datetime:

@@ -1,11 +1,14 @@
-import pytest
+from datetime import datetime
 from unittest.mock import MagicMock
+from uuid import UUID
+
+import pytest
 
 from src.application.services.payments import PaymentService
+from src.core.enums import Currency, PaymentStatus
 from src.domain.entities import Payment
 from src.domain.unit_of_work import IUnitOfWork
 from src.presentation.schemas.payments import PaymentCreateRequest
-from src.common.enums import Currency, PaymentStatus
 
 pytestmark = pytest.mark.asyncio
 
@@ -13,6 +16,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture
 def service(mock_uow: IUnitOfWork) -> PaymentService:
     return PaymentService(mock_uow)
+
 
 async def test_create_payment_new(service: PaymentService, mock_uow: MagicMock) -> None:
     data = PaymentCreateRequest(
@@ -29,12 +33,14 @@ async def test_create_payment_new(service: PaymentService, mock_uow: MagicMock) 
         payment.payment_id = UUID("12345678-1234-5678-1234-567812345678")
         payment.created_at = datetime(2025, 1, 1)
         return payment
+
     mock_uow.payments.add.side_effect = add_side_effect
 
     async def outbox_add_side_effect(outbox):
         outbox.id = UUID("87654321-4321-8765-4321-876543210987")
         outbox.created_at = datetime(2025, 1, 1)
         return outbox
+
     mock_uow.outbox.add.side_effect = outbox_add_side_effect
 
     result = await service.create_payment(data, idempotency_key)

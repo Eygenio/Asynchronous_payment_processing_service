@@ -1,7 +1,7 @@
-from uuid import UUID
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, status
 
 from src.domain.entities import Payment
 from src.presentation.dependencies import PaymentServiceDep
@@ -31,22 +31,26 @@ async def get_payment(
         )
     return payment
 
+
 @router.post(
-    "/",
+    "",
     response_model=PaymentCreateResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def create_payment(
     payload: PaymentCreateRequest,
     service: PaymentServiceDep,
-    idempotency_key: Annotated[str, Header(
-        alias="Idempotency-Key",
-        min_length=1,
-        max_length=255,
-    )],
+    idempotency_key: Annotated[
+        str,
+        Header(
+            alias="Idempotency-Key",
+            min_length=1,
+            max_length=255,
+        ),
+    ],
 ) -> Payment:
     try:
         payment = await service.create_payment(payload, idempotency_key)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     return payment

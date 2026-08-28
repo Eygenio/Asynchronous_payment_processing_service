@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 class PaymentWebhookSender:
     def __init__(
         self,
-        max_attempts: int = settings.webhook_max_attempts,
-        base_delay_seconds: int = settings.webhook_base_delay_seconds,
-        timeout_seconds: int = settings.webhook_timeout_seconds,
+        max_attempts: int = settings.webhook.max_attempts,
+        base_delay_seconds: int = settings.webhook.base_delay_seconds,
+        timeout_seconds: int = settings.webhook.timeout_seconds,
     ) -> None:
         self.max_attempts = max_attempts
         self.base_delay_seconds = base_delay_seconds
@@ -62,7 +62,10 @@ class PaymentWebhookSender:
                 delay = self.base_delay_seconds * (2 ** (attempt - 1))
                 logger.warning(
                     "Webhook attempt %s/%s failed. Retrying in %0.2fs. Error: %s",
-                    attempt, self.max_attempts, delay, error,
+                    attempt,
+                    self.max_attempts,
+                    delay,
+                    error,
                 )
                 await asyncio.sleep(delay)
 

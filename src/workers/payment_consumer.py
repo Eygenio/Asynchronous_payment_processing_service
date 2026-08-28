@@ -5,12 +5,12 @@ from uuid import UUID
 from faststream import AckPolicy, FastStream
 from faststream.rabbit.annotations import RabbitMessage
 
-from src.config.settings import settings
-from src.db.db import async_session_maker
 from src.application.services.payment_processing import PaymentProcessingService
 from src.application.services.webhooks import PaymentWebhookSender
-from src.common.enums import DeliveryStatus, ProcessingState
-from src.common.helpers import parse_retry_count, publish_to_dlq
+from src.config.settings import settings
+from src.core.enums import DeliveryStatus, ProcessingState
+from src.core.helpers import parse_retry_count, publish_to_dlq
+from src.db.db import async_session_maker
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from src.rabbit.broker import (
     NEW_ROUTE,
@@ -49,7 +49,7 @@ async def handle_payment_created(message: dict, msg: RabbitMessage) -> None:
         return
 
     retries = parse_retry_count(msg, NEW_ROUTE)
-    if retries >= settings.max_consumer_retries:
+    if retries >= settings.outbox.max_consumer_retries:
         logger.error("Retries exhausted for payment %s", payment_id)
         try:
             await publish_to_dlq(
@@ -80,6 +80,9 @@ async def handle_payment_created(message: dict, msg: RabbitMessage) -> None:
             if payment is None:
                 raise RuntimeError("Payment object is None after processing")
 
+            if payment.payment_id is None:
+                raise RuntimeError("Payment ID is None after processing")
+
             webhook_payload = {
                 "payment_id": str(payment.payment_id),
                 "status": payment.status.value,
@@ -99,9 +102,11 @@ async def handle_payment_created(message: dict, msg: RabbitMessage) -> None:
         logger.exception("Temporary processing error for payment %s", payment_id)
         await msg.nack(requeue=False)
 
+
 @app.after_startup
 async def startup_declarations() -> None:
     await create_rabbit()
+
 
 if __name__ == "__main__":
     asyncio.run(app.run())

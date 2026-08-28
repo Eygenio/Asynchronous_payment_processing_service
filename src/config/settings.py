@@ -1,16 +1,16 @@
 import logging.config
-from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.config.app import AppConfig
 from src.config.broker import BrokerConfig
 from src.config.database import DatabaseConfig
-from src.config.pool import DatabasePoolConfig
-from src.config.payment import PaymentConfig
-from src.config.webhook import WebhookConfig
-from src.config.outbox import OutboxConfig
 from src.config.logging_config import LOGGING_CONFIG
+from src.config.outbox import OutboxConfig
+from src.config.payment import PaymentConfig
+from src.config.pool import DatabasePoolConfig
+from src.config.webhook import WebhookConfig
 
 
 class Settings(BaseSettings):
@@ -29,8 +29,11 @@ class Settings(BaseSettings):
     webhook: WebhookConfig = Field(default_factory=WebhookConfig)
     outbox: OutboxConfig = Field(default_factory=OutboxConfig)
 
+    api_key: str = Field(default="test-api-key", alias="API_KEY")
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         logging.config.dictConfig(LOGGING_CONFIG)
+
 
 settings = Settings()

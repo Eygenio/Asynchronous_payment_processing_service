@@ -32,20 +32,13 @@ class PaymentRepository(IPaymentRepository):
         return self._to_domain(result) if result else None
 
     async def get_by_id_for_update(self, payment_id: UUID) -> Payment | None:
-        statement = (
-            select(PaymentOrm)
-            .where(PaymentOrm.payment_id == payment_id)
-            .with_for_update()
-        )
+        statement = select(PaymentOrm).where(PaymentOrm.payment_id == payment_id).with_for_update()
         result = await self._session.execute(statement)
         orm = result.scalar_one_or_none()
         return self._to_domain(orm) if orm else None
 
     async def get_by_idempotency_key(self, idempotency_key: str) -> Payment | None:
-        statement = (
-            select(PaymentOrm)
-            .where(PaymentOrm.idempotency_key == idempotency_key)
-        )
+        statement = select(PaymentOrm).where(PaymentOrm.idempotency_key == idempotency_key)
         result = await self._session.execute(statement)
         orm = result.scalar_one_or_none()
         return self._to_domain(orm) if orm else None

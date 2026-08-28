@@ -1,12 +1,13 @@
 from faststream.rabbit import RabbitBroker, RabbitExchange, RabbitQueue
+
 from src.config.settings import settings
 
-PAYMENTS_EXCH = settings.payments_exchange_name
-PAYMENTS_DLX = settings.payments_dlx_name
-NEW_ROUTE = settings.payment_new_route
-RETRY_ROUTE = settings.payment_retry_route
-DLQ_ROUTE = settings.payment_dlq_route
-PAYMENTS_RETRY_DELAY_MS = settings.payment_retry_delay_ms
+PAYMENTS_EXCH = settings.payment.exchange_name
+PAYMENTS_DLX = settings.payment.dlx_name
+NEW_ROUTE = settings.payment.new_route
+RETRY_ROUTE = settings.payment.retry_route
+DLQ_ROUTE = settings.payment.dlq_route
+PAYMENTS_RETRY_DELAY_MS = settings.payment.retry_delay_ms
 
 payments_exchange = RabbitExchange(PAYMENTS_EXCH, durable=True)
 payments_dlx_exchange = RabbitExchange(PAYMENTS_DLX, durable=True)

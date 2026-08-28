@@ -1,12 +1,11 @@
 from datetime import UTC, datetime
-from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.enums import OutboxStatus
 from src.domain.entities import Outbox
 from src.domain.repositories import IOutboxRepository
-from src.core.enums import OutboxStatus
 from src.infrastructure.models.outbox import OutboxOrm
 
 

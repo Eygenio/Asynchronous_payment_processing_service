@@ -1,4 +1,5 @@
 from typing import Any
+
 from src.rabbit.broker import (
     DLQ_ROUTE,
     NEW_ROUTE,
@@ -20,6 +21,7 @@ async def publish_payment_new(
         persist=True,
         mandatory=True,
     )
+
 
 async def publish_payment_to_dlq(
     message: dict[str, Any],

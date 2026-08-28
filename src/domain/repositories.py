@@ -27,6 +27,10 @@ class IPaymentRepository(ABC):
     async def refresh(self, payment: Payment) -> None:
         pass
 
+    @abstractmethod
+    async def update_status(self, payment: Payment) -> None:
+        pass
+
 
 class IOutboxRepository(ABC):
     @abstractmethod

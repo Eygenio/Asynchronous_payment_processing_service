@@ -3,9 +3,9 @@ from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
-from src.domain.entities import Payment, Outbox
-from src.domain.unit_of_work import IUnitOfWork
 from src.core.enums import OutboxStatus, PaymentStatus
+from src.domain.entities import Outbox, Payment
+from src.domain.unit_of_work import IUnitOfWork
 from src.presentation.schemas.payments import PaymentCreateRequest
 
 logger = logging.getLogger(__name__)
@@ -53,13 +53,15 @@ class PaymentService:
         try:
             await self.uow.commit()
             await self.uow.payments.refresh(payment)
-        except IntegrityError:
+        except IntegrityError as error:
             await self.uow.rollback()
             existing = await self.uow.payments.get_by_idempotency_key(idempotency_key)
             if existing is None:
                 raise
             if not self._check_payload(existing, data):
-                raise ValueError("Idempotency key already exists with different parameters.")
+                raise ValueError(
+                    "Idempotency key already exists with different parameters."
+                ) from error
             return existing
 
         return payment

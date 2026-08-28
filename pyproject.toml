@@ -2,8 +2,6 @@
 name = "payment-processing-service"
 version = "0.1.0"
 description = "Async payment processing service with FastAPI, RabbitMQ and PostgreSQL"
-authors = ["Your Name <you@example.com>"]
-readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.122.0",
@@ -31,6 +29,7 @@ dev = [
     "types-aiofiles>=25.1.0.20260518",
     "aiosqlite>=0.22.1",
     "psycopg2-binary>=2.9.12",
+    "faker (>=40.11.0, <41.0.0)",
 ]
 
 [tool.poetry]

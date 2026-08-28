@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.core.enums import OutboxStatus
 from src.infrastructure.models.base import ModelBase
 
+
 class OutboxOrm(ModelBase):
     __tablename__ = "outbox"
 
@@ -16,7 +17,12 @@ class OutboxOrm(ModelBase):
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
     status: Mapped[OutboxStatus] = mapped_column(
-        SQLEnum(OutboxStatus, name="outbox_status", native_enum=True),
+        SQLEnum(
+            OutboxStatus,
+            name="outbox_status",
+            native_enum=True,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
         nullable=False,
         default=OutboxStatus.PENDING,
         server_default=OutboxStatus.PENDING.value,

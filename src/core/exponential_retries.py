@@ -7,9 +7,12 @@ BASE_RETRY_DELAY_SECONDS = settings.outbox.base_retry_delay_seconds
 MAX_OUTBOX_ATTEMPTS = settings.outbox.max_attempts
 
 
-def backoff_delay(attempts: int) -> datetime:
+def backoff_delay(
+    attempts: int,
+    base_delay_seconds: int = BASE_RETRY_DELAY_SECONDS,
+) -> datetime:
     current_time = datetime.now(UTC)
-    exponential_delay = BASE_RETRY_DELAY_SECONDS * (2 ** max(attempts - 1, 0))
+    exponential_delay = base_delay_seconds * (2 ** max(attempts - 1, 0))
     delay_with_jitter = random.uniform(0, exponential_delay)
     return current_time + timedelta(seconds=delay_with_jitter)
 

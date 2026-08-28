@@ -1,5 +1,7 @@
-from datetime import UTC
+from datetime import UTC, datetime
+from decimal import Decimal
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
@@ -36,9 +38,6 @@ def test_create_payment_success(
     sample_payment_data: dict,
     mock_uow: MagicMock,
 ) -> None:
-    from datetime import datetime
-    from uuid import uuid4
-
     async def add_side_effect(payment: MagicMock) -> None:
         payment.payment_id = uuid4()
         payment.created_at = datetime.now(UTC)
@@ -55,3 +54,32 @@ def test_create_payment_success(
     }
     response = api_client.post("/api/v1/payments", json=sample_payment_data, headers=headers)
     assert response.status_code == status.HTTP_202_ACCEPTED
+
+
+def test_create_payment_idempotency_returns_existing_payment(
+    api_client: TestClient,
+    sample_payment_data: dict,
+    mock_uow: MagicMock,
+) -> None:
+    payment_id = uuid4()
+    existing = MagicMock()
+    existing.payment_id = payment_id
+    existing.amount = Decimal("100.00")
+    existing.currency = "USD"
+    existing.description = "Test payment"
+    existing.metadata_ = {"key": "value"}
+    existing.webhook_url = "https://example.com/webhook"
+    existing.status = "pending"
+    existing.created_at = datetime.now(UTC)
+    mock_uow.payments.get_by_idempotency_key.return_value = existing
+
+    headers = {
+        "X-API-Key": "test-api-key",
+        "Idempotency-Key": "same-key",
+    }
+    response = api_client.post("/api/v1/payments", json=sample_payment_data, headers=headers)
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    assert response.json()["payment_id"] == str(payment_id)
+    mock_uow.commit.assert_not_awaited()
+    mock_uow.outbox.add.assert_not_awaited()

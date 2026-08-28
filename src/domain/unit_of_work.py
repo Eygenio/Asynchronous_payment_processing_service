@@ -2,12 +2,17 @@ from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import Self
 
-from src.domain.repositories import IOutboxRepository, IPaymentRepository
+from src.domain.protocols.repositories import (
+    OutboxRepositoryProtocol,
+    PaymentRepositoryProtocol,
+    WebhookOutboxRepositoryProtocol,
+)
 
 
 class IUnitOfWork(ABC):
-    payments: IPaymentRepository
-    outbox: IOutboxRepository
+    payments: PaymentRepositoryProtocol
+    outbox: OutboxRepositoryProtocol
+    webhooks: WebhookOutboxRepositoryProtocol
 
     @abstractmethod
     async def commit(self) -> None:

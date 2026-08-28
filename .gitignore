@@ -7,7 +7,7 @@ __pycache__/
 *.pyd
 *.pdb
 
-# Кэш virtualenv
+# Virtualenv
 .venv/
 venv/
 env/
@@ -16,21 +16,20 @@ env/
 .ipynb_checkpoints/
 
 # ============================
-# Проект
+# Project
 # ============================
 
-# База данных (обязательно!)
+# DB
 database.db
 *.sqlite3
 
-# Логи
+# Logs
 *.log
 
-# Файлы среды
+# Environment files
 .env
 
-
-# Компиляция/кэш
+# Compilation / Cache
 *.egg-info/
 *.egg
 dist/
@@ -49,12 +48,11 @@ build/
 # ============================
 # Docker
 # ============================
-# Исключаем билд-кэш
 docker-compose.override.yml
 *.pid
 
 # ============================
-# Системные файлы
+# System files
 # ============================
 
 # macOS

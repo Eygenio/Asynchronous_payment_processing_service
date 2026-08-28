@@ -4,24 +4,23 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.entities import Payment
-from src.domain.repositories import IPaymentRepository
 from src.infrastructure.models.payments import PaymentOrm
 
 
-class PaymentRepository(IPaymentRepository):
+class PaymentRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     @staticmethod
     def _to_domain(orm: PaymentOrm) -> Payment:
         return Payment(
-            payment_id=orm.payment_id,
             amount=orm.amount,
             currency=orm.currency,
+            idempotency_key=orm.idempotency_key,
+            payment_id=orm.payment_id,
             description=orm.description,
             metadata_=orm.metadata_,
             status=orm.status,
-            idempotency_key=orm.idempotency_key,
             webhook_url=orm.webhook_url,
             created_at=orm.created_at,
             processed_at=orm.processed_at,
@@ -65,9 +64,9 @@ class PaymentRepository(IPaymentRepository):
         orm = await self._session.get(PaymentOrm, payment.payment_id)
         if orm:
             refreshed = self._to_domain(orm)
-            payment.payment_id = refreshed.payment_id
             payment.created_at = refreshed.created_at
             payment.status = refreshed.status
+            payment.processed_at = refreshed.processed_at
 
     async def update_status(self, payment: Payment) -> None:
         if payment.payment_id is None:

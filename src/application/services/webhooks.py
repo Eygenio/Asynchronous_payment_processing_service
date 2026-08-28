@@ -1,87 +1,118 @@
 import asyncio
+import ipaddress
 import json
-import logging
+import socket
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
-from uuid import UUID
+from urllib.parse import urlparse
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from src.config.settings import settings
-from src.core.enums import DeliveryStatus
-from src.rabbit.producer import publish_payment_to_dlq
+from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_attempt
+from tenacity.wait import wait_exponential
 
-logger = logging.getLogger(__name__)
+
+class WebhookTransportError(RuntimeError):
+    """A retryable webhook transport error."""
+
+
+class WebhookNonRetryableError(RuntimeError):
+    """A webhook failure that should not be retried by tenacity."""
+
+
+class _NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        return None
 
 
 class PaymentWebhookSender:
     def __init__(
         self,
-        max_attempts: int = settings.webhook.max_attempts,
-        base_delay_seconds: int = settings.webhook.base_delay_seconds,
-        timeout_seconds: int = settings.webhook.timeout_seconds,
+        timeout_seconds: int,
+        max_attempts: int = 3,
+        base_delay_seconds: int = 2,
+        allow_private_networks: bool = False,
     ) -> None:
+        self.timeout_seconds = timeout_seconds
         self.max_attempts = max_attempts
         self.base_delay_seconds = base_delay_seconds
-        self.timeout_seconds = timeout_seconds
+        self.allow_private_networks = allow_private_networks
 
-    async def send(
-        self,
-        payment_id: UUID,
-        target_url: str | None,
-        payload: dict[str, Any],
-    ) -> DeliveryStatus:
-        if not target_url:
-            logger.info("Webhook URL is empty, skipping payment: %s", payment_id)
-            return DeliveryStatus.SKIPPED
+    async def send(self, target_url: str, payload: dict[str, Any]) -> None:
+        retrying = AsyncRetrying(
+            stop=stop_after_attempt(self.max_attempts),
+            wait=wait_exponential(
+                multiplier=self.base_delay_seconds,
+                min=self.base_delay_seconds,
+                max=30,
+            ),
+            retry=retry_if_exception_type(WebhookTransportError),
+            reraise=True,
+        )
+
+        async for attempt in retrying:
+            with attempt:
+                await asyncio.to_thread(self._post, target_url, payload)
+
+    def _post(self, url: str, payload: dict[str, Any]) -> None:
+        self._validate_target(url)
+        request = Request(
+            url=url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
 
         try:
-            await self._send_with_retry(target_url, payload)
-            return DeliveryStatus.DELIVERED
-        except Exception as webhook_error:
-            logger.exception("Webhook delivery failed for payment %s", payment_id)
-            dlq_payload = {
-                "payment_id": str(payment_id),
-                "reason": f"webhook_failed: {webhook_error}",
-                "payload": payload,
-            }
-            try:
-                await publish_payment_to_dlq(dlq_payload, message_id=str(payment_id))
-                return DeliveryStatus.DLQ_PUBLISHED
-            except Exception:
-                logger.exception("DLQ publish failed for payment %s", payment_id)
-                return DeliveryStatus.DLQ_PUBLISH_FAILED
+            opener = build_opener(_NoRedirectHandler)
+            with opener.open(request, timeout=self.timeout_seconds) as response:
+                status_code = getattr(response, "status", response.getcode())
+                if 400 <= status_code < 500 and status_code not in {408, 429}:
+                    raise WebhookNonRetryableError(
+                        f"Webhook returned HTTP {status_code}",
+                    )
+                if status_code >= 500:
+                    raise WebhookTransportError(
+                        f"Webhook returned HTTP {status_code}",
+                    )
+        except WebhookNonRetryableError:
+            raise
+        except HTTPError as error:
+            if 400 <= error.code < 500 and error.code not in {408, 429}:
+                raise WebhookNonRetryableError(
+                    f"Webhook returned HTTP {error.code}",
+                ) from error
+            raise WebhookTransportError(
+                f"Webhook returned HTTP {error.code}",
+            ) from error
+        except (URLError, TimeoutError, OSError) as error:
+            raise WebhookTransportError(
+                f"Webhook transport error: {error}",
+            ) from error
 
-    async def _send_with_retry(self, url: str, payload: dict[str, Any]) -> None:
-        for attempt in range(1, self.max_attempts + 1):
-            try:
-                await self._post(url, payload)
-                return
-            except RuntimeError as error:
-                if attempt >= self.max_attempts:
-                    raise
-                delay = self.base_delay_seconds * (2 ** (attempt - 1))
-                logger.warning(
-                    "Webhook attempt %s/%s failed. Retrying in %0.2fs. Error: %s",
-                    attempt,
-                    self.max_attempts,
-                    delay,
-                    error,
-                )
-                await asyncio.sleep(delay)
+    def _validate_target(self, url: str) -> None:
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise WebhookNonRetryableError("Webhook URL must use http or https")
+        if self.allow_private_networks:
+            return
 
-    async def _post(self, url: str, payload: dict[str, Any]) -> None:
-        def _request() -> None:
-            request = Request(
-                url=url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST",
+        addresses = {
+            info[4][0]
+            for info in socket.getaddrinfo(
+                parsed.hostname,
+                parsed.port or 443,
+                type=socket.SOCK_STREAM,
             )
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                if response.status >= 400:
-                    raise RuntimeError(f"Status: {response.status}")
-
-        try:
-            await asyncio.to_thread(_request)
-        except (HTTPError, URLError, RuntimeError) as error:
-            raise RuntimeError(f"Webhook transport error: {error}") from error
+        }
+        for address in addresses:
+            ip = ipaddress.ip_address(address)
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+                or ip.is_multicast
+            ):
+                raise WebhookNonRetryableError(
+                    "Webhook target resolves to a private or reserved network",
+                )

@@ -2,5 +2,5 @@ from pydantic import BaseModel
 
 
 class BrokerConfig(BaseModel):
-    url: str
-    result_backend: str
+    url: str = "amqp://guest:guest@localhost:5672/"
+    result_backend: str = "rpc://"

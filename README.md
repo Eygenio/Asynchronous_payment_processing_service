@@ -9,17 +9,17 @@
 
 ## ✨ Возможности
 
-* 💸 Создание и получение информации о платежах
-* 🔁 Асинхронная обработка с эмуляцией внешнего шлюза (2–5 сек, 90% успех)
-* 🔔 Отправка вебхуков с повторными попытками
-* 🐇 Надежная доставка событий через Outbox Pattern
-* 🔑 Идемпотентность с помощью ключа идемпотентности
-* ☠️ Dead Letter Queue для необработанных сообщений
-* 📦 Контейнеризация через Docker и docker-compose
-* 📡 Интерактивная документация Swagger UI / ReDoc
-* 🧪 Автоматические тесты (unit, e2e)
-* 🧹 Линтеры и проверка типов: ruff, mypy, pre-commit
-* 📝 Управление зависимостями через Poetry
+* Создание и получение информации о платежах
+* Асинхронная обработка с эмуляцией внешнего шлюза (2–5 сек, 90% успех)
+* Отправка вебхуков с повторными попытками
+* Надежная доставка событий через Outbox Pattern
+* Идемпотентность с помощью ключа идемпотентности
+* Dead Letter Queue для необработанных сообщений
+* Контейнеризация через Docker и docker-compose
+* Интерактивная документация Swagger UI / ReDoc
+* Автоматические тесты (unit, e2e)
+* Линтеры и проверка типов: ruff, mypy, pre-commit
+* Управление зависимостями через uv
 
 ---
 
@@ -27,8 +27,8 @@
 
 Приложение следует принципам **Clean Architecture**:
 
-* **Domain** – бизнес-сущности и абстрактные интерфейсы репозиториев
-* **Application** – слой сервисов с бизнес-логикой
+* **Domain** – бизнес-сущности и абстрактные интерфейсы через `Protocol`
+* **Application** – слой сервисов с бизнес-логикой и DTO
 * **Infrastructure** – реализации репозиториев, модели SQLAlchemy, Unit of Work
 * **Presentation** – FastAPI роутеры, Pydantic-схемы и зависимости
 
@@ -36,31 +36,33 @@
 project/
 ├── src/
 │ ├── application/
-│ │ └── services/ # Бизнес-логика
+│ │ ├── dto/
+│ │ └── services/
 │ ├── domain/
-│ │ ├── entities.py # Доменные Pydantic-модели
-│ │ ├── repositories.py # Интерфейсы репозиториев
-│ │ └── unit_of_work.py # Абстрактный Unit of Work
+│ │ ├── entities.py
+│ │ ├── protocols/
+│ │ │  └── repositories.py
+│ │ └── unit_of_work.py
 │ ├── infrastructure/
-│ │ ├── models/ # ORM-модели SQLAlchemy
-│ │ ├── repositories/ # Реализации репозиториев
-│ │ └── unit_of_work.py # Конкретный Unit of Work
+│ │ ├── models/
+│ │ ├── repositories/
+│ │ └── unit_of_work.py
 │ ├── presentation/
-│ │ ├── api/ # Роутеры FastAPI
-│ │ ├── schemas/ # Pydantic-схемы запросов/ответов
-│ │ └── dependencies.py # Зависимости FastAPI
-│ ├── rabbit/ # Настройка RabbitMQ, продюсеры
-│ ├── workers/ # Воркеры (consumer, outbox dispatcher)
-│ ├── config/ # Настройки приложения
-│ ├── db/ # Асинхронный движок БД
-│ ├── core/ # Вспомогательные модули
-│ ├── app.py # Точка входа FastAPI
+│ │ ├── api/
+│ │ ├── schemas/
+│ │ └── dependencies.py
+│ ├── rabbit/
+│ ├── workers/
+│ ├── config/
+│ ├── db/
+│ ├── core/
+│ ├── app.py
 ├── tests/
 │ ├── conftest.py
-│ ├── e2e/ # End-to-end тесты API
-│ └── unit/ # Юнит-тесты сервисов
-├── alembic/ # Миграции БД
-├── scripts/ # Вспомогательные скрипты
+│ ├── e2e/
+│ └── unit/
+├── alembic/
+├── scripts/
 ├── docker-compose.yaml
 ├── Dockerfile
 ├── pyproject.toml
@@ -78,10 +80,11 @@ project/
 * **Pydantic** v2
 * **Alembic**
 * **Docker** и **docker-compose**
-* **Poetry**
+* **uv**
 * **Pytest**
 * **Ruff / MyPy / Pre-commit**
-
+* **Tenacity**
+* 
 ---
 
 ## 💡 Функциональность
@@ -97,12 +100,15 @@ project/
 
 ### ⚙️ Consumer
 
-Воркер `payment_consumer` обрабатывает сообщения из очереди, эмулирует платежный шлюз (задержка 2–5 секунд, 90% успех), обновляет статус в БД и отправляет вебхук.
+Воркер `payment_consumer` обрабатывает сообщения из очереди, эмулирует платежный шлюз (задержка 2–5 секунд, 90% успех).
+После обработки статус платежа и задача на доставку вебхука сохраняются в БД в рамках одной транзакции.
+Отправкой вебхуков занимается отдельный воркер `webhook_dispatcher`.
 
 ### 🔁 Retry и DLQ
 
-* Повторные попытки при ошибках отправки вебхука (экспоненциальная задержка)
-* Необработанные после 3 попыток сообщения попадают в Dead Letter Queue
+* Повторные попытки отправки вебхуков реализованы с помощью `tenacity`
+* Для вебхуков используется отдельная таблица outbox с durable retry-логикой
+* Необработанные после 3 попыток сообщения RabbitMQ попадают в Dead Letter Queue
 
 ---
 
@@ -116,9 +122,9 @@ git clone https://github.com/Eygenio/Asynchronous_payment_processing_service
 
 ## 2. Настройка окружения
 
-Скопируйте `.env.template` в `.env` и при необходимости измените параметры:
+Скопируйте `.env.example` в `.env` и при необходимости измените параметры:
 ```bash
-cp .env.template .env
+cp .env.example .env
 ```
 
 ## 3. Запуск через Docker Compose
@@ -136,7 +142,7 @@ RabbitMQ Management: `http://localhost:15672` (логин/пароль: guest/gu
 
 Запуск тестов:
 ```bash
-pytest
+uv run pytest
 ```
 
 ---
@@ -144,10 +150,10 @@ pytest
 ## 🧹 Проверка кода
 
 ```bash
-pre-commit run --all-files
-ruff check .
-ruff format .
-mypy src
+uv run pre-commit run --all-files
+uv run ruff check . 
+uv run ruff format . 
+uv run mypy src
 ```
 
 ---
@@ -157,6 +163,7 @@ mypy src
 * Аутентификация по статическому API-ключу в заголовке `X-API-Key` для всех эндпоинтов `/api/*`
 * Пароли и секреты вынесены в `.env`
 * База данных и RabbitMQ изолированы внутри Docker-сети
+* Webhook URL проверяется перед отправкой, включая защиту от запросов в приватные и зарезервированные сети
 
 ---
 

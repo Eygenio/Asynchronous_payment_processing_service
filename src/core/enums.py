@@ -15,7 +15,15 @@ class PaymentStatus(StrEnum):
 
 class OutboxStatus(StrEnum):
     PENDING = "pending"
+    PROCESSING = "processing"
     PUBLISHED = "published"
+    FAILED = "failed"
+
+
+class WebhookDeliveryStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    DELIVERED = "delivered"
     FAILED = "failed"
 
 
@@ -23,10 +31,3 @@ class ProcessingState(StrEnum):
     PROCESSED = "processed"
     ALREADY_PROCESSED = "already_processed"
     NOT_FOUND = "not_found"
-
-
-class DeliveryStatus(StrEnum):
-    DELIVERED = "delivered"
-    SKIPPED = "skipped"
-    DLQ_PUBLISHED = "dlq_published"
-    DLQ_PUBLISH_FAILED = "dlq_publish_failed"

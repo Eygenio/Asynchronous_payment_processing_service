@@ -1,14 +1,15 @@
 from datetime import datetime
+from decimal import Decimal
 from unittest.mock import MagicMock
 from uuid import UUID
 
 import pytest
 
+from src.application.dto.payments import PaymentCreateDTO
 from src.application.services.payments import PaymentService
 from src.core.enums import Currency, PaymentStatus
 from src.domain.entities import Payment
 from src.domain.unit_of_work import IUnitOfWork
-from src.presentation.schemas.payments import PaymentCreateRequest
 
 pytestmark = pytest.mark.asyncio
 
@@ -19,8 +20,8 @@ def service(mock_uow: IUnitOfWork) -> PaymentService:
 
 
 async def test_create_payment_new(service: PaymentService, mock_uow: MagicMock) -> None:
-    data = PaymentCreateRequest(
-        amount="100.00",
+    data = PaymentCreateDTO(
+        amount=Decimal("100.00"),
         currency=Currency.USD,
         description="test",
         metadata={},
@@ -49,4 +50,4 @@ async def test_create_payment_new(service: PaymentService, mock_uow: MagicMock) 
     assert result.status == PaymentStatus.PENDING
     mock_uow.payments.add.assert_called_once()
     mock_uow.outbox.add.assert_called_once()
-    mock_uow.commit.assert_called_once()
+    mock_uow.commit.assert_awaited_once()

@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, status
 
+from src.application.dto.payments import PaymentCreateDTO
 from src.domain.entities import Payment
 from src.presentation.dependencies import PaymentServiceDep
 from src.presentation.schemas.payments import (
@@ -49,8 +50,18 @@ async def create_payment(
         ),
     ],
 ) -> Payment:
+    dto = PaymentCreateDTO(
+        amount=payload.amount,
+        currency=payload.currency,
+        description=payload.description,
+        metadata=dict(payload.metadata),
+        webhook_url=str(payload.webhook_url) if payload.webhook_url else None,
+    )
+
     try:
-        payment = await service.create_payment(payload, idempotency_key)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
-    return payment
+        return await service.create_payment(dto, idempotency_key)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error

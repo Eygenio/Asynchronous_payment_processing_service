@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, Index, Integer, String, func
 from sqlalchemy import Enum as SQLEnum
@@ -15,7 +16,7 @@ class OutboxOrm(ModelBase):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     status: Mapped[OutboxStatus] = mapped_column(
         SQLEnum(
             OutboxStatus,
@@ -30,6 +31,7 @@ class OutboxOrm(ModelBase):
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     backoff_delay: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

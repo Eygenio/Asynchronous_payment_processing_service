@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.unit_of_work import IUnitOfWork
 from src.infrastructure.repositories.outbox import OutboxRepository
 from src.infrastructure.repositories.payments import PaymentRepository
+from src.infrastructure.repositories.webhook_outbox import WebhookOutboxRepository
 
 
 class SQLAlchemyUnitOfWork(IUnitOfWork):
@@ -13,6 +14,7 @@ class SQLAlchemyUnitOfWork(IUnitOfWork):
         self._session = session
         self.payments = PaymentRepository(session)
         self.outbox = OutboxRepository(session)
+        self.webhooks = WebhookOutboxRepository(session)
 
     async def commit(self) -> None:
         await self._session.commit()

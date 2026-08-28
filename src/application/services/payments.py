@@ -3,10 +3,10 @@ from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
+from src.application.dto.payments import PaymentCreateDTO
 from src.core.enums import OutboxStatus, PaymentStatus
 from src.domain.entities import Outbox, Payment
 from src.domain.unit_of_work import IUnitOfWork
-from src.presentation.schemas.payments import PaymentCreateRequest
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class PaymentService:
 
     async def create_payment(
         self,
-        data: PaymentCreateRequest,
+        data: PaymentCreateDTO,
         idempotency_key: str,
     ) -> Payment:
         existing = await self.uow.payments.get_by_idempotency_key(idempotency_key)
@@ -33,10 +33,10 @@ class PaymentService:
             amount=data.amount,
             currency=data.currency,
             description=data.description,
-            metadata_=data.metadata,
+            metadata_=dict(data.metadata),
             status=PaymentStatus.PENDING,
             idempotency_key=idempotency_key,
-            webhook_url=str(data.webhook_url) if data.webhook_url else None,
+            webhook_url=data.webhook_url,
         )
         await self.uow.payments.add(payment)
 
@@ -67,11 +67,11 @@ class PaymentService:
         return payment
 
     @staticmethod
-    def _check_payload(existing: Payment, data: PaymentCreateRequest) -> bool:
+    def _check_payload(existing: Payment, data: PaymentCreateDTO) -> bool:
         return (
             existing.amount == data.amount
             and existing.currency == data.currency
             and existing.description == data.description
             and existing.metadata_ == data.metadata
-            and existing.webhook_url == (str(data.webhook_url) if data.webhook_url else None)
+            and existing.webhook_url == data.webhook_url
         )

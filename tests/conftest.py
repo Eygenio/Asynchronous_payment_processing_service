@@ -1,13 +1,13 @@
-from typing import Generator, AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock
 
 from src.app import app
-from src.domain.unit_of_work import IUnitOfWork
 from src.application.services.payments import PaymentService
+from src.domain.unit_of_work import IUnitOfWork
 from src.presentation.dependencies import get_uow
 
 fake = Faker()
@@ -35,8 +35,8 @@ def mock_uow() -> MagicMock:
 
 
 @pytest.fixture(autouse=True)
-def override_get_uow(mock_uow: MagicMock) -> Generator[None, None, None]:
-    async def _override() -> AsyncGenerator[IUnitOfWork, None]:
+def override_get_uow(mock_uow: MagicMock) -> Generator[None]:
+    async def _override() -> AsyncGenerator[IUnitOfWork]:
         yield mock_uow
 
     app.dependency_overrides[get_uow] = _override

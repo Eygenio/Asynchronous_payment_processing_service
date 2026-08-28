@@ -2,12 +2,11 @@ import asyncio
 import logging
 
 from src.application.services.outbox import OutboxService
+from src.core.constants import POLL_INTERVAL_SECONDS
 from src.db.db import async_session_maker
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
-from src.core.constants import POLL_INTERVAL_SECONDS
 
 logger = logging.getLogger(__name__)
-
 
 
 async def run_outbox_dispatcher() -> None:

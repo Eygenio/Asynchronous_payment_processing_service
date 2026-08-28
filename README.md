@@ -84,7 +84,7 @@ project/
 * **Pytest**
 * **Ruff / MyPy / Pre-commit**
 * **Tenacity**
-* 
+*
 ---
 
 ## 💡 Функциональность
@@ -151,8 +151,8 @@ uv run pytest
 
 ```bash
 uv run pre-commit run --all-files
-uv run ruff check . 
-uv run ruff format . 
+uv run ruff check .
+uv run ruff format .
 uv run mypy src
 ```
 

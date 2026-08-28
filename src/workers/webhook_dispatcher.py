@@ -4,10 +4,10 @@ from datetime import UTC, datetime, timedelta
 
 from src.application.services.webhooks import PaymentWebhookSender
 from src.config.settings import settings
+from src.core.constants import BATCH_SIZE, POLL_INTERVAL_SECONDS
 from src.core.exponential_retries import attempts_exhausted, backoff_delay
 from src.db.db import async_session_maker
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
-from src.core.constants import BATCH_SIZE, POLL_INTERVAL_SECONDS
 
 logger = logging.getLogger(__name__)
 

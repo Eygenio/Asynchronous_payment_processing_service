@@ -28,11 +28,7 @@ class PaymentProcessingService:
         await self.uow.rollback()
 
         await asyncio.sleep(random.uniform(2, 5))
-        new_status = (
-            PaymentStatus.SUCCEEDED
-            if random.random() < 0.9
-            else PaymentStatus.FAILED
-        )
+        new_status = PaymentStatus.SUCCEEDED if random.random() < 0.9 else PaymentStatus.FAILED
 
         payment = await self.uow.payments.get_by_id_for_update(payment_id)
         if payment is None:

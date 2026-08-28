@@ -45,3 +45,39 @@ async def test_create_payment_new(service: PaymentService, mock_uow: MagicMock) 
     mock_uow.payments.add.assert_called_once()
     mock_uow.outbox.add.assert_called_once()
     mock_uow.commit.assert_awaited_once()
+
+
+async def test_create_payment_returns_existing_payment(
+    service: PaymentService,
+    mock_uow: MagicMock,
+) -> None:
+    existing_payment = Payment(
+        payment_id=UUID("12345678-1234-5678-1234-567812345678"),
+        amount=Decimal("100.00"),
+        currency=Currency.USD,
+        description="test",
+        metadata_={},
+        status=PaymentStatus.PENDING,
+        idempotency_key="key1",
+        webhook_url=None,
+        created_at=datetime(2025, 1, 1),
+    )
+
+    mock_uow.payments.get_by_idempotency_key.return_value = existing_payment
+
+    data = PaymentCreateDTO(
+        amount=Decimal("100.00"),
+        currency=Currency.USD,
+        description="test",
+        metadata={},
+        webhook_url=None,
+    )
+
+    result = await service.create_payment(
+        data,
+        "key1",
+    )
+
+    assert result is existing_payment
+    mock_uow.commit.assert_not_awaited()
+    mock_uow.outbox.add.assert_not_awaited()

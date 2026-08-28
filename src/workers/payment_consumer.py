@@ -11,7 +11,13 @@ from src.core.enums import ProcessingState
 from src.core.helpers import parse_retry_count, publish_to_dlq
 from src.db.db import async_session_maker
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
-from src.rabbit.broker import NEW_ROUTE, broker, create_rabbit, payments_exchange, payments_new_queue
+from src.rabbit.broker import (
+    NEW_ROUTE,
+    broker,
+    create_rabbit,
+    payments_exchange,
+    payments_new_queue,
+)
 
 logger = logging.getLogger(__name__)
 app = FastStream(broker)

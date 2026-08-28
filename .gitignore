@@ -28,7 +28,7 @@ database.db
 
 # Файлы среды
 .env
-.env.*
+
 
 # Компиляция/кэш
 *.egg-info/

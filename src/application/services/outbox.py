@@ -1,5 +1,7 @@
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from src.application.dto.outbox import OutboxDispatchResult
 from src.config.settings import settings
@@ -13,8 +15,20 @@ logger = logging.getLogger(__name__)
 
 
 class OutboxService:
-    def __init__(self, uow: IUnitOfWork) -> None:
+    def __init__(
+        self,
+        uow: IUnitOfWork,
+        *,
+        session_maker: Callable[[], Any] = async_session_maker,
+        uow_factory: Callable[[Any], IUnitOfWork] = SQLAlchemyUnitOfWork,
+        publish_new: Callable[..., Any] = publish_payment_new,
+        publish_dlq: Callable[..., Any] = publish_payment_to_dlq,
+    ) -> None:
         self.uow = uow
+        self._session_maker = session_maker
+        self._uow_factory = uow_factory
+        self._publish_new = publish_new
+        self._publish_dlq = publish_dlq
 
     async def dispatch_pending_outbox(
         self,
@@ -35,7 +49,7 @@ class OutboxService:
 
         for message in messages:
             try:
-                await publish_payment_new(
+                await self._publish_new(
                     message.payload,
                     message_id=str(message.id),
                 )
@@ -43,11 +57,11 @@ class OutboxService:
                 logger.exception("Outbox message publish failed: %s", message.id)
                 attempts = message.retry_count + 1
 
-                async with async_session_maker() as session:
-                    update_uow = SQLAlchemyUnitOfWork(session)
+                async with self._session_maker() as session:
+                    update_uow = self._uow_factory(session)
                     if attempts_exhausted(attempts=attempts):
                         try:
-                            await publish_payment_to_dlq(
+                            await self._publish_dlq(
                                 message.payload,
                                 message_id=str(message.id),
                             )
@@ -73,8 +87,8 @@ class OutboxService:
                     await update_uow.commit()
                 continue
 
-            async with async_session_maker() as session:
-                update_uow = SQLAlchemyUnitOfWork(session)
+            async with self._session_maker() as session:
+                update_uow = self._uow_factory(session)
                 await update_uow.outbox.mark_published(message)
                 await update_uow.commit()
             sent_count += 1

@@ -1,6 +1,5 @@
-from unittest.mock import Mock
-
 import pytest
+from unittest.mock import Mock
 
 from src.application.services.webhooks import (
     PaymentWebhookSender,
@@ -9,7 +8,6 @@ from src.application.services.webhooks import (
 )
 
 
-@pytest.mark.asyncio
 async def test_webhook_sender_retries_transient_errors(monkeypatch) -> None:
     sender = PaymentWebhookSender(
         timeout_seconds=2,
@@ -25,7 +23,6 @@ async def test_webhook_sender_retries_transient_errors(monkeypatch) -> None:
     assert post.call_count == 2
 
 
-@pytest.mark.asyncio
 async def test_webhook_sender_does_not_retry_non_retryable_error(monkeypatch) -> None:
     sender = PaymentWebhookSender(
         timeout_seconds=2,

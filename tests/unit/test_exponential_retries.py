@@ -1,6 +1,5 @@
-from datetime import UTC, datetime, timedelta
-
 import pytest
+from datetime import UTC, datetime, timedelta
 
 from src.core.exponential_retries import attempts_exhausted, backoff_delay
 

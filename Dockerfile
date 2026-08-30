@@ -19,7 +19,6 @@ RUN uv pip install --system --no-cache-dir .
 
 COPY . .
 
-RUN chmod +x /app/scripts/wait-for-db.sh
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \

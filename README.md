@@ -59,6 +59,7 @@ project/
 │ ├── app.py
 ├── tests/
 │ ├── conftest.py
+│ ├── factories.py
 │ ├── e2e/
 │ └── unit/
 ├── alembic/
@@ -140,9 +141,20 @@ RabbitMQ Management: `http://localhost:15672` (логин/пароль: guest/gu
 
 ## 🧪 Тестирование
 
-Запуск тестов:
+Запуск unit-тестов:
 ```bash
 uv run pytest
+```
+
+E2E-тесты запускаются против реально работающего Docker Compose-стека:
+```bash
+docker compose up -d
+uv run pytest --run-e2e -m e2e
+```
+
+После тестов:
+```bash
+docker compose down
 ```
 
 ---

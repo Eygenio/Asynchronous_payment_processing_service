@@ -22,7 +22,9 @@ def test_backoff_delay_uses_injected_clock_and_jitter() -> None:
 
 def test_backoff_delay_increases_exponentially() -> None:
     fixed = datetime(2026, 8, 28, 12, 0, 0, tzinfo=UTC)
-    jitter = lambda _min, maximum: maximum
+
+    def jitter(_min: float, maximum: float) -> float:
+        return maximum
 
     first = backoff_delay(1, 3, now=lambda: fixed, jitter=jitter)
     second = backoff_delay(2, 3, now=lambda: fixed, jitter=jitter)

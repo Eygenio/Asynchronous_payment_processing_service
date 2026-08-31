@@ -22,7 +22,7 @@ class WebhookNonRetryableError(RuntimeError):
 
 class WebhookHttpClient(Protocol):
     def post(self, url: str, payload: dict[str, Any], timeout: int) -> None:
-        ...
+        pass
 
 
 class _NoRedirectHandler(HTTPRedirectHandler):

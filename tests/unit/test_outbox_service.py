@@ -2,6 +2,8 @@ import pytest
 
 from src.application.services.outbox import OutboxService
 from src.core.enums import OutboxStatus
+from tests.factories import OutboxFactory
+from tests.fakes import InMemoryUnitOfWork
 
 pytestmark = pytest.mark.unit
 
@@ -10,14 +12,17 @@ class AsyncContext:
     def __init__(self, value) -> None:
         self.value = value
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> None:
         return self.value
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         return None
 
 
-async def test_dispatch_pending_outbox_publishes_message(uow, outbox_entity) -> None:
+async def test_dispatch_pending_outbox_publishes_message(
+    uow: InMemoryUnitOfWork,
+    outbox_entity: OutboxFactory,
+) -> None:
     message = outbox_entity
     message.status = OutboxStatus.PENDING
     await uow.outbox.add(message)

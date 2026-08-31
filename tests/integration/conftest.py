@@ -5,7 +5,12 @@ from contextlib import suppress
 import psycopg2
 import pytest
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.pool import NullPool
 
 from src.infrastructure.models.base import ModelBase
@@ -52,9 +57,7 @@ def _drop_database() -> None:
 
 
 def _database_url() -> str:
-    return (
-        f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{TEST_DB_NAME}"
-    )
+    return f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{TEST_DB_NAME}"
 
 
 @pytest.fixture(scope="session")
@@ -68,7 +71,7 @@ def integration_database() -> str:
 
 
 @pytest.fixture(scope="session")
-async def integration_engine(integration_database: str) -> AsyncGenerator[AsyncEngine, None]:
+async def integration_engine(integration_database: str) -> AsyncGenerator[AsyncEngine]:
     engine = create_async_engine(_database_url(), poolclass=NullPool)
     async with engine.begin() as connection:
         await connection.run_sync(ModelBase.metadata.create_all)
@@ -79,7 +82,7 @@ async def integration_engine(integration_database: str) -> AsyncGenerator[AsyncE
 @pytest.fixture
 async def integration_session(
     integration_engine: AsyncEngine,
-) -> AsyncGenerator[AsyncSession, None]:
+) -> AsyncGenerator[AsyncSession]:
     session_factory = async_sessionmaker(integration_engine, expire_on_commit=False)
     async with session_factory() as session:
         yield session

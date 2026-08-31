@@ -1,17 +1,22 @@
+from collections.abc import AsyncGenerator
+
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.application.dto.payments import PaymentCreateDTO
 from src.application.services.payments import PaymentService
 from src.core.enums import OutboxStatus
 from src.infrastructure.models.outbox import OutboxOrm
+from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 
 pytestmark = pytest.mark.integration
 
 
 async def test_payment_service_creates_payment_and_outbox_atomically(
-    integration_uow,
-    integration_session,
-    payment_create_dto,
+    integration_uow: SQLAlchemyUnitOfWork,
+    integration_session: AsyncGenerator[AsyncSession],
+    payment_create_dto: PaymentCreateDTO,
 ) -> None:
     service = PaymentService(integration_uow)
     data = payment_create_dto
@@ -31,8 +36,8 @@ async def test_payment_service_creates_payment_and_outbox_atomically(
 
 
 async def test_payment_service_returns_existing_payment_for_same_idempotency_key(
-    integration_uow,
-    payment_create_dto,
+    integration_uow: SQLAlchemyUnitOfWork,
+    payment_create_dto: PaymentCreateDTO,
 ) -> None:
     service = PaymentService(integration_uow)
     data = payment_create_dto

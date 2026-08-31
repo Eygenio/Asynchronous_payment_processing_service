@@ -7,7 +7,6 @@ from src.application.dto.outbox import OutboxDispatchResult
 from src.config.settings import settings
 from src.core.exponential_retries import attempts_exhausted, backoff_delay
 from src.db.db import async_session_maker
-from src.domain.entities import Outbox
 from src.domain.unit_of_work import IUnitOfWork
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from src.rabbit.producer import publish_payment_new, publish_payment_to_dlq
@@ -60,7 +59,9 @@ class OutboxService:
                         try:
                             await self._dlq_publisher(message.payload, str(message.id))
                         except Exception:
-                            logger.exception("Failed to publish DLQ for outbox message %s", message.id)
+                            logger.exception(
+                                "Failed to publish DLQ for outbox message %s", message.id
+                            )
                             await update_uow.outbox.schedule_retry(
                                 message,
                                 attempts=attempts,

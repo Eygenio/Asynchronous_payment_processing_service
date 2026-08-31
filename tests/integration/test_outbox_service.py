@@ -1,15 +1,18 @@
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.application.services.outbox import OutboxService
 from src.core.enums import OutboxStatus
+from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
+from tests.factories import OutboxFactory
 
 pytestmark = pytest.mark.integration
 
 
 async def test_outbox_service_dispatches_pending_message_with_real_repository(
-    integration_uow,
-    integration_session_factory,
-    outbox_entity,
+    integration_uow: SQLAlchemyUnitOfWork,
+    integration_session_factory: async_sessionmaker[AsyncSession],
+    outbox_entity: OutboxFactory,
 ) -> None:
     message = outbox_entity
     message.status = OutboxStatus.PENDING

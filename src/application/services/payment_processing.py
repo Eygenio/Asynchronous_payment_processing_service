@@ -44,9 +44,7 @@ class PaymentProcessingService:
         await self.uow.rollback()
         await self._sleep(self._random_delay(2, 5))
         new_status = (
-            PaymentStatus.SUCCEEDED
-            if self._success_probability() < 0.9
-            else PaymentStatus.FAILED
+            PaymentStatus.SUCCEEDED if self._success_probability() < 0.9 else PaymentStatus.FAILED
         )
 
         payment = await self.uow.payments.get_by_id_for_update(payment_id)

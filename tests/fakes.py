@@ -19,7 +19,11 @@ class InMemoryPaymentRepository:
 
     async def get_by_idempotency_key(self, idempotency_key: str) -> Payment | None:
         return next(
-            (payment for payment in self.items.values() if payment.idempotency_key == idempotency_key),
+            (
+                payment
+                for payment in self.items.values()
+                if payment.idempotency_key == idempotency_key
+            ),
             None,
         )
 
@@ -54,9 +58,7 @@ class InMemoryOutboxRepository:
         lease_until: datetime,
     ) -> Sequence[Outbox]:
         messages = [
-            message
-            for message in self.items.values()
-            if message.status is OutboxStatus.PENDING
+            message for message in self.items.values() if message.status is OutboxStatus.PENDING
         ][:limit]
         for message in messages:
             message.status = OutboxStatus.PROCESSING

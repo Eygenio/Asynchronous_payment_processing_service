@@ -4,15 +4,15 @@ import pytest
 
 from src.application.services.payment_processing import PaymentProcessingService
 from src.core.enums import PaymentStatus, ProcessingState, WebhookDeliveryStatus
+from src.domain.entities import Payment
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
-from tests.factories import PaymentFactory
 
 pytestmark = pytest.mark.integration
 
 
 async def test_processing_commits_status_and_webhook_with_real_repositories(
     integration_uow: SQLAlchemyUnitOfWork,
-    payment_entity: PaymentFactory,
+    payment_entity: Payment,
 ) -> None:
     payment = payment_entity
     payment.webhook_url = "https://example.com/webhook"

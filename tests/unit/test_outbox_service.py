@@ -2,7 +2,7 @@ import pytest
 
 from src.application.services.outbox import OutboxService
 from src.core.enums import OutboxStatus
-from tests.factories import OutboxFactory
+from src.domain.entities import Outbox
 from tests.fakes import InMemoryUnitOfWork
 
 pytestmark = pytest.mark.unit
@@ -21,7 +21,7 @@ class AsyncContext:
 
 async def test_dispatch_pending_outbox_publishes_message(
     uow: InMemoryUnitOfWork,
-    outbox_entity: OutboxFactory,
+    outbox_entity: Outbox,
 ) -> None:
     message = outbox_entity
     message.status = OutboxStatus.PENDING

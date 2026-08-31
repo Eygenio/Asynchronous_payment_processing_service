@@ -1,5 +1,3 @@
-from collections.abc import AsyncGenerator
-
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +13,7 @@ pytestmark = pytest.mark.integration
 
 async def test_payment_service_creates_payment_and_outbox_atomically(
     integration_uow: SQLAlchemyUnitOfWork,
-    integration_session: AsyncGenerator[AsyncSession],
+    integration_session: AsyncSession,
     payment_create_dto: PaymentCreateDTO,
 ) -> None:
     service = PaymentService(integration_uow)

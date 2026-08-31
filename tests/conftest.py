@@ -4,6 +4,7 @@ import pytest
 
 from src.application.dto.payments import PaymentCreateDTO
 from src.core.enums import Currency
+from src.domain.entities import Outbox, Payment
 from tests.factories import OutboxFactory, PaymentCreateDTOFactory, PaymentFactory
 
 
@@ -22,10 +23,10 @@ def different_payment_create_dto() -> PaymentCreateDTO:
 
 
 @pytest.fixture
-def payment_entity() -> PaymentFactory:
+def payment_entity() -> Payment:
     return PaymentFactory.build()
 
 
 @pytest.fixture
-def outbox_entity() -> OutboxFactory:
+def outbox_entity() -> Outbox:
     return OutboxFactory.build()

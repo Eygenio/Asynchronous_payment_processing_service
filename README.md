@@ -17,7 +17,7 @@
 * Dead Letter Queue для необработанных сообщений
 * Контейнеризация через Docker и docker-compose
 * Интерактивная документация Swagger UI / ReDoc
-* Автоматические тесты (unit, e2e)
+* Автоматические тесты (unit, integration, e2e)
 * Линтеры и проверка типов: ruff, mypy, pre-commit
 * Управление зависимостями через uv
 
@@ -59,11 +59,12 @@ project/
 │ ├── app.py
 ├── tests/
 │ ├── conftest.py
-│ ├── factories.py
-│ ├── e2e/
-│ └── unit/
+│ ├── factories/
+│ ├── fakes.py
+│ ├── unit/
+│ ├── integration/
+│ └── e2e/
 ├── alembic/
-├── scripts/
 ├── docker-compose.yaml
 ├── Dockerfile
 ├── pyproject.toml
@@ -83,6 +84,7 @@ project/
 * **Docker** и **docker-compose**
 * **uv**
 * **Pytest**
+* **factory_boy + Faker**
 * **Ruff / MyPy / Pre-commit**
 * **Tenacity**
 *
@@ -141,21 +143,24 @@ RabbitMQ Management: `http://localhost:15672` (логин/пароль: guest/gu
 
 ## 🧪 Тестирование
 
-Запуск unit-тестов:
+Запуск unit + integration тестов:
 ```bash
 uv run pytest
 ```
 
-E2E-тесты запускаются против реально работающего Docker Compose-стека:
+Unit-тесты используют in-memory fake repositories и factory_boy/Faker.
+Integration-тесты поднимают отдельную PostgreSQL database `payments_test` и работают с реальными SQLAlchemy repositories.
+E2E-тесты намеренно запускаются отдельно против уже поднятого Docker Compose stack:
+
 ```bash
-docker compose up -d
-uv run pytest --run-e2e -m e2e
+# сначала запустить приложение
+docker compose up --build -d
+
+# затем выполнить E2E
+uv run pytest tests/e2e
 ```
 
-После тестов:
-```bash
-docker compose down
-```
+Для другого адреса API можно задать `E2E_BASE_URL`; API key передаётся через `API_KEY`.
 
 ---
 

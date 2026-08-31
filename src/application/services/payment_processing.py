@@ -1,5 +1,6 @@
 import asyncio
 import random
+from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -7,10 +8,25 @@ from src.core.enums import PaymentStatus, ProcessingState
 from src.domain.entities import Payment, WebhookOutbox
 from src.domain.unit_of_work import IUnitOfWork
 
+Sleep = Callable[[float], Coroutine[object, object, None]]
+Now = Callable[[], datetime]
+
 
 class PaymentProcessingService:
-    def __init__(self, uow: IUnitOfWork) -> None:
+    def __init__(
+        self,
+        uow: IUnitOfWork,
+        *,
+        sleep: Sleep = asyncio.sleep,
+        random_delay: Callable[[float, float], float] = random.uniform,
+        success_probability: Callable[[], float] = random.random,
+        now: Now = lambda: datetime.now(UTC),
+    ) -> None:
         self.uow = uow
+        self._sleep = sleep
+        self._random_delay = random_delay
+        self._success_probability = success_probability
+        self._now = now
 
     async def process_payment_created(
         self,
@@ -26,9 +42,12 @@ class PaymentProcessingService:
             return ProcessingState.ALREADY_PROCESSED, payment
 
         await self.uow.rollback()
-
-        await asyncio.sleep(random.uniform(2, 5))
-        new_status = PaymentStatus.SUCCEEDED if random.random() < 0.9 else PaymentStatus.FAILED
+        await self._sleep(self._random_delay(2, 5))
+        new_status = (
+            PaymentStatus.SUCCEEDED
+            if self._success_probability() < 0.9
+            else PaymentStatus.FAILED
+        )
 
         payment = await self.uow.payments.get_by_id_for_update(payment_id)
         if payment is None:
@@ -40,7 +59,7 @@ class PaymentProcessingService:
             return ProcessingState.ALREADY_PROCESSED, payment
 
         payment.status = new_status
-        payment.processed_at = datetime.now(UTC)
+        payment.processed_at = self._now()
         await self.uow.payments.update_status(payment)
 
         if payment.webhook_url and payment.payment_id is not None:

@@ -31,6 +31,7 @@ dev = [
     "aiosqlite>=0.22.1",
     "psycopg2-binary>=2.9.12",
     "faker>=40.11.0,<41.0.0",
+    "factory-boy>=3.3.3",
 ]
 
 [tool.ruff]
@@ -59,7 +60,7 @@ exclude = ["alembic/", "scripts/", "tests/"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests"]
+testpaths = ["tests/unit", "tests/integration"]
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
 ]

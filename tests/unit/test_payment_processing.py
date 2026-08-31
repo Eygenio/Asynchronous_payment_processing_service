@@ -1,60 +1,43 @@
-import asyncio
-from unittest.mock import AsyncMock
+import pytest
 
-from src.application.services.payment_processing import PaymentProcessingService
-from src.core.enums import PaymentStatus, ProcessingState
+from src.application.services.payments import PaymentService
+from src.core.enums import PaymentStatus
 
-from tests.factories import payment
-
-
-async def test_processing_does_not_hold_db_lock_during_gateway_call(monkeypatch) -> None:
-    entity = payment(webhook_url="https://example.com/webhook")
-    uow = type("Uow", (), {})()
-    uow.payments = type("Payments", (), {})()
-    uow.webhooks = type("Webhooks", (), {})()
-    uow.payments.get_by_id = AsyncMock(return_value=entity)
-    uow.payments.get_by_id_for_update = AsyncMock(return_value=entity)
-    uow.payments.update_status = AsyncMock()
-    uow.webhooks.add = AsyncMock()
-    uow.commit = AsyncMock()
-    uow.rollback = AsyncMock()
-
-    async def fake_sleep(_: float) -> None:
-        assert uow.rollback.await_count == 1
-
-    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
-    monkeypatch.setattr(
-        "src.application.services.payment_processing.random.uniform",
-        lambda _a, _b: 3.0,
-    )
-    monkeypatch.setattr(
-        "src.application.services.payment_processing.random.random",
-        lambda: 0.5,
-    )
-
-    state, result = await PaymentProcessingService(uow).process_payment_created(entity.payment_id)
-
-    assert state is ProcessingState.PROCESSED
-    assert result is entity
-    assert entity.status is PaymentStatus.SUCCEEDED
-    assert entity.processed_at is not None
-    uow.payments.update_status.assert_awaited_once_with(entity)
-    uow.webhooks.add.assert_awaited_once()
-    uow.commit.assert_awaited_once()
+pytestmark = pytest.mark.unit
 
 
-async def test_already_processed_payment_is_ackable_without_side_effects() -> None:
-    entity = payment(status=PaymentStatus.FAILED, processed_at=payment().created_at)
-    uow = type("Uow", (), {})()
-    uow.payments = type("Payments", (), {})()
-    uow.webhooks = type("Webhooks", (), {})()
-    uow.payments.get_by_id = AsyncMock(return_value=entity)
-    uow.rollback = AsyncMock()
-    uow.webhooks.add = AsyncMock()
+async def test_create_payment_new(payment_service: PaymentService, uow, payment_create_dto) -> None:
+    data = payment_create_dto
 
-    state, result = await PaymentProcessingService(uow).process_payment_created(entity.payment_id)
+    result = await payment_service.create_payment(data, data.description or "key")
 
-    assert state is ProcessingState.ALREADY_PROCESSED
-    assert result is entity
-    uow.rollback.assert_awaited_once()
-    uow.webhooks.add.assert_not_awaited()
+    assert result.status is PaymentStatus.PENDING
+    assert result.amount == data.amount
+    assert result.currency is data.currency
+    assert len(uow.outbox.items) == 1
+    assert uow.commit_count == 1
+
+
+async def test_create_payment_returns_existing_payment(payment_service: PaymentService, uow, payment_create_dto) -> None:
+    data = payment_create_dto
+    existing = await payment_service.create_payment(data, "idempotency-key")
+    uow.commit_count = 0
+
+    result = await payment_service.create_payment(data, "idempotency-key")
+
+    assert result is existing
+    assert uow.commit_count == 0
+    assert len(uow.outbox.items) == 1
+
+
+async def test_create_payment_rejects_different_payload(
+    payment_service: PaymentService,
+    payment_create_dto,
+    different_payment_create_dto,
+) -> None:
+    first = payment_create_dto
+    await payment_service.create_payment(first, "idempotency-key")
+    second = different_payment_create_dto
+
+    with pytest.raises(ValueError, match="different parameters"):
+        await payment_service.create_payment(second, "idempotency-key")

@@ -26,6 +26,10 @@ class OutboxRepository:
             created_at=orm.created_at,
         )
 
+    async def get_by_id(self, message_id: UUID) -> Outbox | None:
+        orm = await self._session.get(OutboxOrm, message_id)
+        return self._to_domain(orm) if orm else None
+
     async def add(self, outbox: Outbox) -> Outbox:
         orm = OutboxOrm(
             event_type=outbox.event_type,

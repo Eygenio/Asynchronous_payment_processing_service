@@ -27,6 +27,9 @@ class PaymentRepositoryProtocol(Protocol):
 
 
 class OutboxRepositoryProtocol(Protocol):
+    async def get_by_id(self, message_id: UUID) -> Outbox | None:
+        pass
+
     async def add(self, outbox: Outbox) -> Outbox:
         pass
 

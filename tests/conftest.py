@@ -1,22 +1,30 @@
+from decimal import Decimal
+
 import pytest
 
+from src.core.enums import Currency
+from tests.factories import OutboxFactory, PaymentCreateDTOFactory, PaymentFactory
 
-def pytest_addoption(parser: pytest.Parser) -> None:
-    parser.addoption(
-        "--run-e2e",
-        action="store_true",
-        default=False,
-        help="Run end-to-end tests against a running Docker Compose stack.",
+
+@pytest.fixture
+def payment_create_dto():
+    return PaymentCreateDTOFactory.build()
+
+
+@pytest.fixture
+def different_payment_create_dto():
+    return PaymentCreateDTOFactory.build(
+        amount=Decimal("101.00"),
+        currency=Currency.USD,
+        webhook_url=None,
     )
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    if config.getoption("--run-e2e"):
-        return
+@pytest.fixture
+def payment_entity():
+    return PaymentFactory.build()
 
-    skip_e2e = pytest.mark.skip(
-        reason="E2E tests require a running Docker Compose stack; use --run-e2e."
-    )
-    for item in items:
-        if "e2e" in item.keywords:
-            item.add_marker(skip_e2e)
+
+@pytest.fixture
+def outbox_entity():
+    return OutboxFactory.build()

@@ -3,33 +3,27 @@ import pytest
 from src.application.services.outbox import OutboxService
 from src.core.enums import OutboxStatus
 
-pytestmark = pytest.mark.unit
+pytestmark = pytest.mark.integration
 
 
-class AsyncContext:
-    def __init__(self, value) -> None:
-        self.value = value
-
-    async def __aenter__(self):
-        return self.value
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        return None
-
-
-async def test_dispatch_pending_outbox_publishes_message(uow, outbox_entity) -> None:
+async def test_outbox_service_dispatches_pending_message_with_real_repository(
+    integration_uow,
+    integration_session_factory,
+    outbox_entity,
+) -> None:
     message = outbox_entity
     message.status = OutboxStatus.PENDING
-    await uow.outbox.add(message)
+    await integration_uow.outbox.add(message)
+    await integration_uow.commit()
+
     published: list[tuple[dict, str | None]] = []
 
     async def publisher(payload, message_id):
         published.append((payload, message_id))
 
     service = OutboxService(
-        uow,
-        session_factory=lambda: AsyncContext(object()),
-        uow_factory=lambda _session: uow,
+        integration_uow,
+        session_factory=integration_session_factory,
         publisher=publisher,
         dlq_publisher=publisher,
     )
@@ -39,6 +33,8 @@ async def test_dispatch_pending_outbox_publishes_message(uow, outbox_entity) -> 
     assert result.selected == 1
     assert result.sent == 1
     assert result.failed == 0
-    assert message.status is OutboxStatus.PUBLISHED
     assert published == [(message.payload, str(message.id))]
-    assert uow.commit_count == 2
+
+    stored = await integration_uow.outbox.get_by_id(message.id)
+    assert stored is not None
+    assert stored.status is OutboxStatus.PUBLISHED

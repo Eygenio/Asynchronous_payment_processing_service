@@ -1,0 +1,131 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB__USER:-postgres}
+      POSTGRES_PASSWORD: ${DB__PASSWORD:-postgres}
+      POSTGRES_DB: ${DB__NAME:-payments}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB__USER:-postgres} -d ${DB__NAME:-payments}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  migrate:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: &app-env
+      PYTHONPATH: /app
+      API_KEY: ${API_KEY:-test-api-key}
+      APP__HOST: 0.0.0.0
+      APP__PORT: 8000
+      DB__NAME: ${DB__NAME:-payments}
+      DB__USER: ${DB__USER:-postgres}
+      DB__PASSWORD: ${DB__PASSWORD:-postgres}
+      DB__HOST: postgres
+      DB__PORT: 5432
+      DB__DRIVER_NAME: postgresql+asyncpg
+      BROKER__URL: amqp://${RABBIT_USER:-guest}:${RABBIT_PASSWORD:-guest}@rabbitmq:5672/
+      BROKER__RESULT_BACKEND: rpc://
+      POOL__ECHO: ${POOL__ECHO:-false}
+      POOL__POOL_PRE_PING: ${POOL__POOL_PRE_PING:-true}
+      POOL__POOL_SIZE: ${POOL__POOL_SIZE:-5}
+      POOL__MAX_OVERFLOW: ${POOL__MAX_OVERFLOW:-10}
+      PAYMENT__EXCHANGE_NAME: ${PAYMENT__EXCHANGE_NAME:-payments}
+      PAYMENT__DLX_NAME: ${PAYMENT__DLX_NAME:-payments.dlx}
+      PAYMENT__NEW_ROUTE: ${PAYMENT__NEW_ROUTE:-payments.new}
+      PAYMENT__RETRY_ROUTE: ${PAYMENT__RETRY_ROUTE:-payments.new.retry}
+      PAYMENT__DLQ_ROUTE: ${PAYMENT__DLQ_ROUTE:-payments.new.dlq}
+      PAYMENT__RETRY_DELAY_MS: ${PAYMENT__RETRY_DELAY_MS:-10000}
+      PAYMENT__NEW_TOPIC: ${PAYMENT__NEW_TOPIC:-payments.new}
+      OUTBOX__BASE_RETRY_DELAY_SECONDS: ${OUTBOX__BASE_RETRY_DELAY_SECONDS:-3}
+      OUTBOX__MAX_ATTEMPTS: ${OUTBOX__MAX_ATTEMPTS:-3}
+      OUTBOX__MAX_CONSUMER_RETRIES: ${OUTBOX__MAX_CONSUMER_RETRIES:-3}
+      OUTBOX__LEASE_SECONDS: ${OUTBOX__LEASE_SECONDS:-60}
+      WEBHOOK__MAX_ATTEMPTS: ${WEBHOOK__MAX_ATTEMPTS:-3}
+      WEBHOOK__BASE_DELAY_SECONDS: ${WEBHOOK__BASE_DELAY_SECONDS:-2}
+      WEBHOOK__TIMEOUT_SECONDS: ${WEBHOOK__TIMEOUT_SECONDS:-10}
+      WEBHOOK__ALLOW_PRIVATE_NETWORKS: ${WEBHOOK__ALLOW_PRIVATE_NETWORKS:-false}
+    networks: [backend]
+    command: ["alembic", "upgrade", "head"]
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment: *app-env
+    ports:
+      - "8000:8000"
+    networks: [backend]
+    command: ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment: *app-env
+    networks: [backend]
+    command: ["python", "-m", "src.workers.payment_consumer"]
+
+  outbox_dispatcher:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment: *app-env
+    networks: [backend]
+    command: ["python", "-m", "src.workers.outbox_dispatcher"]
+
+  webhook_dispatcher:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment: *app-env
+    networks: [backend]
+    command: ["python", "-m", "src.workers.webhook_dispatcher"]
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+
+networks:
+  backend:

@@ -26,7 +26,7 @@ async def test_dispatch_pending_outbox_publishes_message(
     message = outbox_entity
     message.status = OutboxStatus.PENDING
     await uow.outbox.add(message)
-    published: list[tuple[dict, str | None]] = []
+    published = []
 
     async def publisher(payload, message_id):
         published.append((payload, message_id))

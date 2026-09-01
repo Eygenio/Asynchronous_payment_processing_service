@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     outbox: OutboxConfig = Field(default_factory=OutboxConfig)
 
     api_key: str = Field(default="test-api-key", alias="API_KEY")
+    test_db_name: str = Field(default="test_payments", alias="TEST_DB_NAME")
+    test_base_url: str = Field(default="http://127.0.0.1:8000", alias="TEST_BASE_URL")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

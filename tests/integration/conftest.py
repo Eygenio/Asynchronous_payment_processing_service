@@ -1,5 +1,5 @@
-import os
 from collections.abc import AsyncGenerator
+from unittest.mock import AsyncMock
 
 import psycopg2
 import pytest
@@ -12,26 +12,21 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
+from src.application.services.outbox import OutboxService
+from src.config.settings import settings
 from src.infrastructure.models.base import ModelBase
 from src.infrastructure.repositories.outbox import OutboxRepository
 from src.infrastructure.repositories.payments import PaymentRepository
 from src.infrastructure.repositories.webhook_outbox import WebhookOutboxRepository
 from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 
-TEST_DB_NAME = os.getenv("TEST_DB__NAME", "payments_test")
-
-DB_HOST = os.getenv("TEST_DB__HOST", "localhost")
-DB_PORT = int(os.getenv("TEST_DB__PORT", "5432"))
-DB_USER = os.getenv("TEST_DB__USER", "postgres")
-DB_PASSWORD = os.getenv("TEST_DB__PASSWORD", "postgres")
-
 
 def _sync_db_connection(database: str):
     return psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASSWORD,
+        host=settings.db.host,
+        port=settings.db.port,
+        user=settings.db.user,
+        password=settings.db.password,
         dbname=database,
     )
 
@@ -49,13 +44,13 @@ def _create_database() -> None:
                 FROM pg_database
                 WHERE datname = %s
                 """,
-                (TEST_DB_NAME,),
+                (settings.test_db_name,),
             )
 
             database_exists = cursor.fetchone() is not None
 
             if not database_exists:
-                cursor.execute(f'CREATE DATABASE "{TEST_DB_NAME}"')
+                cursor.execute(f'CREATE DATABASE "{settings.test_db_name}"')
     finally:
         connection.close()
 
@@ -73,7 +68,7 @@ def _drop_database() -> None:
                 FROM pg_database
                 WHERE datname = %s
                 """,
-                (TEST_DB_NAME,),
+                (settings.test_db_name,),
             )
 
             database_exists = cursor.fetchone() is not None
@@ -88,16 +83,20 @@ def _drop_database() -> None:
                 WHERE datname = %s
                   AND pid <> pg_backend_pid()
                 """,
-                (TEST_DB_NAME,),
+                (settings.test_db_name,),
             )
 
-            cursor.execute(f'DROP DATABASE "{TEST_DB_NAME}"')
+            cursor.execute(f'DROP DATABASE "{settings.test_db_name}"')
     finally:
         connection.close()
 
 
 def _database_url() -> str:
-    return f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{TEST_DB_NAME}"
+    return (
+        f"{settings.db.driver_name}://"
+        f"{settings.db.user}:{settings.db.password}@"
+        f"{settings.db.host}:{settings.db.port}/{settings.test_db_name}"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -105,7 +104,7 @@ def integration_database() -> str:
     _create_database()
 
     try:
-        yield TEST_DB_NAME
+        yield settings.test_db_name
     finally:
         _drop_database()
 
@@ -180,3 +179,28 @@ def webhook_repository(
     integration_session: AsyncSession,
 ) -> WebhookOutboxRepository:
     return WebhookOutboxRepository(integration_session)
+
+
+@pytest.fixture
+def outbox_publisher() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
+def outbox_dlq_publisher() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
+def outbox_service(
+    integration_uow: SQLAlchemyUnitOfWork,
+    integration_session_factory: async_sessionmaker[AsyncSession],
+    outbox_publisher: AsyncMock,
+    outbox_dlq_publisher: AsyncMock,
+) -> OutboxService:
+    return OutboxService(
+        integration_uow,
+        session_factory=integration_session_factory,
+        publisher=outbox_publisher,
+        dlq_publisher=outbox_dlq_publisher,
+    )

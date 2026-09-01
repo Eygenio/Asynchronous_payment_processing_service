@@ -10,7 +10,7 @@ from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 pytestmark = pytest.mark.integration
 
 
-async def test_processing_commits_status_and_webhook_with_real_repositories(
+async def test_processing_with_real_repositories(
     integration_uow: SQLAlchemyUnitOfWork,
     payment_entity: Payment,
 ) -> None:

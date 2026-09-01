@@ -1,5 +1,6 @@
+from unittest.mock import AsyncMock
+
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.application.services.outbox import OutboxService
 from src.core.enums import OutboxStatus
@@ -9,9 +10,10 @@ from src.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 pytestmark = pytest.mark.integration
 
 
-async def test_outbox_service_dispatches_pending_message_with_real_repository(
+async def test_outbox_service_with_real_repository(
+    outbox_service: OutboxService,
+    outbox_publisher: AsyncMock,
     integration_uow: SQLAlchemyUnitOfWork,
-    integration_session_factory: async_sessionmaker[AsyncSession],
     outbox_entity: Outbox,
 ) -> None:
     message = outbox_entity
@@ -19,24 +21,16 @@ async def test_outbox_service_dispatches_pending_message_with_real_repository(
     await integration_uow.outbox.add(message)
     await integration_uow.commit()
 
-    published: list[tuple[dict, str | None]] = []
-
-    async def publisher(payload, message_id):
-        published.append((payload, message_id))
-
-    service = OutboxService(
-        integration_uow,
-        session_factory=integration_session_factory,
-        publisher=publisher,
-        dlq_publisher=publisher,
-    )
-
-    result = await service.dispatch_pending_outbox()
+    result = await outbox_service.dispatch_pending_outbox()
 
     assert result.selected == 1
     assert result.sent == 1
     assert result.failed == 0
-    assert published == [(message.payload, str(message.id))]
+
+    outbox_publisher.assert_awaited_once_with(
+        message.payload,
+        str(message.id),
+    )
 
     stored = await integration_uow.outbox.get_by_id(message.id)
     assert stored is not None

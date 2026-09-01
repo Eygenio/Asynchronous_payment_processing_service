@@ -33,7 +33,7 @@ async def test_payment_service_creates_payment_and_outbox_atomically(
     assert outbox.payload["payment_id"] == str(result.payment_id)
 
 
-async def test_payment_service_returns_existing_payment_for_same_idempotency_key(
+async def test_payment_service_returns_existing_payment(
     integration_uow: SQLAlchemyUnitOfWork,
     payment_create_dto: PaymentCreateDTO,
 ) -> None:

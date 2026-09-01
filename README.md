@@ -59,8 +59,8 @@ project/
 │ ├── app.py
 ├── tests/
 │ ├── conftest.py
-│ ├── factories/
 │ ├── fakes.py
+│ ├── factories/
 │ ├── unit/
 │ ├── integration/
 │ └── e2e/
@@ -143,24 +143,27 @@ RabbitMQ Management: `http://localhost:15672` (логин/пароль: guest/gu
 
 ## 🧪 Тестирование
 
-Запуск unit + integration тестов:
+Запуск unit тестов:
 ```bash
-uv run pytest
+uv run pytest tests/unit
 ```
 
 Unit-тесты используют in-memory fake repositories и factory_boy/Faker.
-Integration-тесты поднимают отдельную PostgreSQL database `payments_test` и работают с реальными SQLAlchemy repositories.
+Integration-тесты поднимают отдельную PostgreSQL database `test_payments` и работают с реальными SQLAlchemy repositories.
 E2E-тесты намеренно запускаются отдельно против уже поднятого Docker Compose stack:
 
 ```bash
 # сначала запустить приложение
 docker compose up --build -d
 
+# затем выполнить integration
+uv run pytest tests/integration
+
 # затем выполнить E2E
 uv run pytest tests/e2e
 ```
 
-Для другого адреса API можно задать `E2E_BASE_URL`; API key передаётся через `API_KEY`.
+Для другого адреса API можно задать `TEST_BASE_URL`; API key передаётся через `API_KEY`.
 
 ---
 
